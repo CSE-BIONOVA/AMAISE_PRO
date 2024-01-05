@@ -45,7 +45,16 @@ for seq in FastqGeneralIterator(open(inputset)):
     trainData.append((generate_long_sequences(seq[1]), train_df[i][4]))
     i = i + 1
 
-trainData = trainData[481701:491702]
+trainData = trainData[489319:499319]
+a = 0
+b = 0
+for x in trainData:
+	if x[1]==0:
+		a = a + 1
+	else:
+		b = b + 1
+print(a)
+print(b)
 # for row in train_df:
 #     trainData.append((generate_long_sequences(row[0]),row[1]))
 
@@ -97,4 +106,4 @@ print("total time taken to train the model: {:.2f}s".format(endTime - startTime)
 
 # serialize the model to disk
 modelP = nn.DataParallel(model)
-torch.save(modelP.state_dict(), newModelPath)
+#torch.save(modelP.state_dict(), newModelPath)

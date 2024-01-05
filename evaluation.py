@@ -29,10 +29,13 @@ print(preds[30])
 true = []
 true_df = pd.read_csv(truefile).to_numpy()
 for line in true_df:
-    true.append(int(line[4]))
+    if int(line[1])!=1:
+       true.append(0)
+    else:
+       true.append(1)
          
-preds = preds[:481701]+preds[491702:]
-true = true[:481701]+true[491702:]
+#preds = preds[:489319]+preds[499319:]
+#true = true[:489319]+true[499319:]
 print(len(preds))
 accuracy = accuracy_score(true, preds)
 tn, fp, fn, tp = confusion_matrix(true, preds).ravel()

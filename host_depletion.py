@@ -92,7 +92,8 @@ model = nn.DataParallel(model)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model.to(device)
-model.load_state_dict(torch.load(modelpath))
+print(torch.load(modelpath,device))
+model.load_state_dict(torch.load(modelpath,device))
 model.eval()
 
 # Get length information to bin input sequences by length
