@@ -41,11 +41,20 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 train_df = pd.read_csv(labelset).to_numpy()
 trainData = []
 i = 0
+x = 0
+y = 0
 for seq in FastqGeneralIterator(open(inputset)):
-    trainData.append((generate_long_sequences(seq[1]), train_df[i][4]))
-    i = i + 1
+    if train_df[i][1]!=1:
+          trainData.append((generate_long_sequences(seq[1]), 0))
+          x = +1
+          
+    else:
+          trainData.append((generate_long_sequences(seq[1]), 1))
+          y+=1
+print(x)
+print(y)
 
-trainData = trainData[489319:499319]
+trainData = trainData[:20000]
 a = 0
 b = 0
 for x in trainData:
