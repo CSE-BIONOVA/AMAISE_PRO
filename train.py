@@ -115,4 +115,4 @@ print("total time taken to train the model: {:.2f}s".format(endTime - startTime)
 
 # serialize the model to disk
 modelP = nn.DataParallel(model)
-#torch.save(modelP.state_dict(), newModelPath)
+torch.save(modelP.state_dict(), newModelPath)
