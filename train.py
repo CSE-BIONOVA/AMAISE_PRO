@@ -43,7 +43,7 @@ trainData = []
 i = 0
 x = 0
 y = 0
-for seq in FastqGeneralIterator(open(inputset)):
+for seq in SeqIO.parse(inputset, "fasta"):
     if train_df[i][1]!=1:
           trainData.append((generate_long_sequences(seq[1]), 0))
           x = +1
