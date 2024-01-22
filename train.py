@@ -98,17 +98,18 @@ for e in range(0, EPOCHS):
 	# loop over the training set
     # for step, (x,y) in enumerate(trainDataLoader):
 	for (x, y) in trainDataLoader:
-		# send the input to the device
-		(x, y) = (x.clone().detach().float().to(device), y.to(device))
-		# perform a forward pass and calculate the training loss
-		pred = torch.sigmoid(model(x))
-		loss = lossFn(pred, y)
-
-        # zero out the gradients, perform the backpropagation step,
-		# and update the weights
-		opt.zero_grad()
-		loss.backward()
-		opt.step()
+            # send the input to the device
+            (x, y) = (x.clone().detach().float().to(device), y.to(device))
+            print(x)
+            print(y)
+            # perform a forward pass and calculate the training loss
+            pred = torch.sigmoid(model(x))
+            loss = lossFn(pred, y)
+            # zero out the gradients, perform the backpropagation step,
+            # and update the weights
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
 # finish measuring how long training took
 endTime = time.time()
 print("total time taken to train the model: {:.2f}s".format(endTime - startTime))
