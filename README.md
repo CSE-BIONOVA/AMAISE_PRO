@@ -9,7 +9,8 @@ python3 train.py -m **modelNameWithPath** -i **trainsetWithPath** -l **labelsetW
 
 ex: 
 
-python3 train.py -m ../../TestResults/human_long/human_long_test -i ../../Metagenome/shark/train/shark_metagenome.fasta -l ../../Metagenome/shark/train/shark_metagenome.csv
+python3 train.py -m ../../TestResults/human_test/human_test_model -i ../../Metagenome/human/human_metagenome.fasta -l ../../Metagenome/human/human_metagenome.csv
+
 
 ## Transfer Learning
 
@@ -17,7 +18,7 @@ python3 tltrain.py -m **existingModelNameWithPath** -i **trainsetWithPath** -l *
 
 ex:
 
-python3 tltrain.py -m models_and_references/single_end_model -i ../../Metagenome/shark/train/shark_metagenome.fasta -l ../../Metagenome/shark/train/shark_metagenome.csv -n ../../TestResults/human_long_tl/human_long_tl_test
+python3 tltrain.py -m models_and_references/single_end_model -i ../../Metagenome/shark/train/shark_metagenome.fasta -l ../../Metagenome/shark/train/shark_metagenome.csv -n ../../TestResults/human_test_tl/human_test_tl_model
 
 ## for testing
 
@@ -25,7 +26,7 @@ python3 host_depletion.py -i **inputfile** -t **typefile** -o **outfolder** -m *
 
 ex:
 
-python3 host_depletion.py -i ../../Metagenome/human/human_metagenome.fasta -t fasta -o ../../TestResults/human_long/train -m ../../TestResults/human_long/human_long_test
+python3 host_depletion.py -i ../../Metagenome/human/human_metagenome.fasta -t fasta -o ../../TestResults/human_test/train -m ../../TestResults/human_test/human_test_model
 
 ## for evaluating
 
@@ -33,6 +34,6 @@ python3 evaluation.py -o **fileToWrite** -t **truefile** -p **predfile**
 
 ex:
 
-python3 evaluation.py -o ../../TestResults/human_long/train/eval_sum.txt -t ../../Metagenome/human/human_metagenome.csv -p ../../TestResults/human_long/train/mlprobs.txt
+python3 evaluation.py -o ../../TestResults/human_test/train/eval_sum.txt -t ../../Metagenome/human/human_metagenome.csv -p ../../TestResults/human_test/train/mlprobs.txt
 
 
