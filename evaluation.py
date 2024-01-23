@@ -22,13 +22,13 @@ with open(predfile, 'r') as f:
       for line in f:
          preds.append(line.split(', ')[1])
          
-preds = preds[1:]
+preds = preds[1:30001]
 preds = [int(x) for x in preds]
 print(preds[30])
 
 true = []
 true_df = pd.read_csv(truefile).to_numpy()
-for line in true_df:
+for line in true_df[:30000]:
     if int(line[1])!=1:
        true.append(0)
     else:

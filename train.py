@@ -51,10 +51,11 @@ for seq in SeqIO.parse(inputset, "fasta"):
     else:
           trainData.append((generate_long_sequences(seq[1]), 1))
           y+=1
+    i+=1
 print(x)
 print(y)
 
-trainData = trainData[:20000]
+trainData = trainData[:30000]
 a = 0
 b = 0
 for x in trainData:
@@ -93,23 +94,24 @@ startTime = time.time()
 # loop over our epochs
 for e in range(0, EPOCHS):
 	# set the model in training mode
-	model.train()
-	
-	# loop over the training set
+    model.train()
+
+	# loop over the training set 
     # for step, (x,y) in enumerate(trainDataLoader):
-	for (x, y) in trainDataLoader:
+    for (x, y) in trainDataLoader:
             # send the input to the device
-            (x, y) = (x.clone().detach().float().to(device), y.to(device))
-            print(x)
-            print(y)
+        (x, y) = (x.clone().detach().float().to(device), y.to(device))
+            # print(x)
+            # print(y)
             # perform a forward pass and calculate the training loss
-            pred = torch.sigmoid(model(x))
-            loss = lossFn(pred, y)
+        pred = torch.sigmoid(model(x))
+        loss = lossFn(pred, y)
+        print(loss)
             # zero out the gradients, perform the backpropagation step,
             # and update the weights
-            opt.zero_grad()
-            loss.backward()
-            opt.step()
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
 # finish measuring how long training took
 endTime = time.time()
 print("total time taken to train the model: {:.2f}s".format(endTime - startTime))
