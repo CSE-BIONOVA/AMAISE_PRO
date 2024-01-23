@@ -1,25 +1,37 @@
 # AMAISE_PRO
 
-for testing
-python3 host_depletion.py -i <inputfile> -t <typefile> -o <outfolder> -m <model>
-model = 'models_and_references/model_new'
+cd Documents/codes/AMAISE_PRO
 
-python3 host_depletion.py -i ../../Metagenome/shark/test/shark_metagenome.fasta -t fasta -o ../../TestResults/shark_long_tl -m ../../TestResults/shark_long_tl/shark_long_tl_
+## for original training
 
-for training
-python3 train.py -m <pathtosavemodel> -i <trainset> -l <labelset>
-pathtosavemodel  = 'models_and_references/model_new'
-trainset = 'train_data/set1.csv'
+python3 train.py -m **modelNameWithPath** -i **trainsetWithPath** -l **labelsetWithPath**
 
-python3 tltrain.py -m models_and_references/single_end_model -i Metagenome/shark/train/shark_metagenome.fasta -l ../../Metagenome/shark/train/shark_metagenome.csv -n ../../TestResults/shark_long_tl/shark_long_tl_
+ex: 
 
-for evaluating
-python3 evaluation.py -o <fileToWrite> -t <truefile> -p <predfile>
-fileToWrite = 'Testings/eval_summary.txt
-truefile = 'train_data/human.csv'
-predfile = 'Testings/test/mlprobs.txt'
+python3 train.py -m ../../TestResults/human_long/human_long_test -i ../../Metagenome/shark/train/shark_metagenome.fasta -l ../../Metagenome/shark/train/shark_metagenome.csv
 
+## Transfer Learning
 
-models - models_and_references
-model_name - human_short_tl, shark_long_o
+python3 tltrain.py -m **existingModelNameWithPath** -i **trainsetWithPath** -l **labelsetWithPath** -n **newModelNameWithPath**
+
+ex:
+
+python3 tltrain.py -m models_and_references/single_end_model -i ../../Metagenome/shark/train/shark_metagenome.fasta -l ../../Metagenome/shark/train/shark_metagenome.csv -n ../../TestResults/human_long_tl/human_long_tl_test
+
+## for testing
+
+python3 host_depletion.py -i **inputfile** -t **typefile** -o **outfolder** -m **model**
+
+ex:
+
+python3 host_depletion.py -i ../../Metagenome/human/human_metagenome.fasta -t fasta -o ../../TestResults/human_long/train -m ../../TestResults/human_long/human_long_test
+
+## for evaluating
+
+python3 evaluation.py -o **fileToWrite** -t **truefile** -p **predfile**
+
+ex:
+
+python3 evaluation.py -o ../../TestResults/human_long/train/eval_sum.txt -t ../../Metagenome/human/human_metagenome.csv -p ../../TestResults/human_long/train/mlprobs.txt
+
 
