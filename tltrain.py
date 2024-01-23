@@ -56,7 +56,7 @@ for seq in SeqIO.parse(inputset, "fasta"):
     else:
        trainData.append((generate_long_sequences(seq[1]), 1))
        print("--1--")
-       i = i + 1
+    i = i + 1
 print(i)
 trainData = trainData[:20000]
 # for row in train_df:
