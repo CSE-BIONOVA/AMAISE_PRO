@@ -1,6 +1,7 @@
 # AMAISE_PRO
 
 cd Documents/codes/AMAISE_PRO
+go to ErrorTesting branch
 
 ## for original training
 
