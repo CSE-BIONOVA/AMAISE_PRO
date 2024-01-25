@@ -97,8 +97,8 @@ for e in range(0, EPOCHS):
     model.train()
 
 	# loop over the training set 
-    # for step, (x,y) in enumerate(trainDataLoader):
-    for (x, y) in trainDataLoader:
+    for step, (x,y) in enumerate(trainDataLoader):
+    # for (x, y) in trainDataLoader:
             # send the input to the device
         (x, y) = (x.clone().detach().float().to(device), y.to(device))
             # print(x)
@@ -112,6 +112,7 @@ for e in range(0, EPOCHS):
         opt.zero_grad()
         loss.backward()
         opt.step()
+        # opt.zero_grad()
 # finish measuring how long training took
 endTime = time.time()
 print("total time taken to train the model: {:.2f}s".format(endTime - startTime))

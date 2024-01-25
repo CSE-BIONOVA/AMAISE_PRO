@@ -7,6 +7,7 @@ from torch.optim import Adam
 import time
 import sys, getopt
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
+from classify import *
 
 try:
     opts, args = getopt.getopt(sys.argv[1:], 'm:i:l:')

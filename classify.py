@@ -1,19 +1,24 @@
 import torch.nn as nn
 import torch.nn.functional as F
+import torch
 
 class ClassificationBase(nn.Module):
     
     def training_step(self, batch):
         images, labels = batch 
-        out = self(images)                  # Generate predictions
+        out = torch.sigmoid(self(images.clone().detach().float()))                  # Generate predictions
+        # m = F.softmax(out, dim=1)
         loss = F.cross_entropy(out, labels) # Calculate loss
         return loss
     
     def validation_step(self, batch):
         images, labels = batch 
-        out = self(images)                    # Generate predictions
+        out = torch.sigmoid(self(images.clone().detach().float()))                    # Generate predictions
+        # m = F.softmax(out, dim=1)
         loss = F.cross_entropy(out, labels)   # Calculate loss
-        acc = accuracy(out, labels)           # Calculate accuracy
+        # acc = accuracy(out, labels)           # Calculate accuracy
+        _, preds = torch.max(out, dim=1)
+        acc = torch.tensor(torch.sum(preds == labels).item() / len(preds))
         return {'val_loss': loss.detach(), 'val_acc': acc}
         
     def validation_epoch_end(self, outputs):

@@ -7,6 +7,7 @@ from Bio.SeqIO.QualityIO import FastqGeneralIterator
 torch.backends.cudnn.enabled=False
 from constants import *
 import joblib
+from classify import *
 
 # ensure reproducibility
 seed = 0
@@ -54,10 +55,10 @@ def generate_long_sequences(sequence):
     and shorter sequences will be prepadded with zeros."""
     features = np.zeros((len(sequence), 4))
     seq_list = np.array(list(sequence))
-    features[seq_list=="A", 0] = 1
-    features[seq_list=="C", 1] = 1
-    features[seq_list=="G", 2] = 1
-    features[seq_list=="T", 3] = 1
+    features[seq_list=="A" or seq_list=="a", 0] = 1
+    features[seq_list=="C" or seq_list=="c", 1] = 1
+    features[seq_list=="G" or seq_list=="g", 2] = 1
+    features[seq_list=="T" or seq_list=="t", 3] = 1
     features[seq_list=="N", 0] = 0.25
     features[seq_list=="N", 1] = 0.25
     features[seq_list=="N", 2] = 0.25
@@ -73,7 +74,7 @@ TCN: AMAISE's architecture, which consists of 4 convolutional layers, a global a
 
 The class TCN contains AMAISE's architecture
 '''
-class TCN(nn.Module):
+class TCN(ClassificationBase):
     def __init__(self):
         num_input_channels = 4
         num_output_channels = 128

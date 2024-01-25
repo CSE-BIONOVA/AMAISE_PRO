@@ -7,6 +7,10 @@ go to ErrorTesting branch
 
 python3 train.py -m **modelNameWithPath** -i **trainsetWithPath** -l **labelsetWithPath**
 
+ or
+
+python3 train_new.py -m **modelNameWithPath** -i **trainsetWithPath** -l **labelsetWithPath**
+
 ex: 
 
 python3 train.py -m ../../TestResults/human_test/human_test_model -i ../../Metagenome/human/human_metagenome.fasta -l ../../Metagenome/human/human_metagenome.csv
