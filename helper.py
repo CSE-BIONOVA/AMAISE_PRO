@@ -55,10 +55,14 @@ def generate_long_sequences(sequence):
     and shorter sequences will be prepadded with zeros."""
     features = np.zeros((len(sequence), 4))
     seq_list = np.array(list(sequence))
-    features[seq_list=="A" or seq_list=="a", 0] = 1
-    features[seq_list=="C" or seq_list=="c", 1] = 1
-    features[seq_list=="G" or seq_list=="g", 2] = 1
-    features[seq_list=="T" or seq_list=="t", 3] = 1
+    features[seq_list=="A", 0] = 1
+    features[seq_list=="C", 1] = 1
+    features[seq_list=="G", 2] = 1
+    features[seq_list=="T", 3] = 1
+    features[seq_list=="a", 0] = 1
+    features[seq_list=="c", 1] = 1
+    features[seq_list=="g", 2] = 1
+    features[seq_list=="t", 3] = 1
     features[seq_list=="N", 0] = 0.25
     features[seq_list=="N", 1] = 0.25
     features[seq_list=="N", 2] = 0.25

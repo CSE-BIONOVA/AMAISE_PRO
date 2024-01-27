@@ -45,11 +45,11 @@ x = 0
 y = 0
 for seq in SeqIO.parse(inputset, "fasta"):
     if train_df[i][1]!=1:
-          trainData.append((generate_long_sequences(seq[1]), 0))
+          trainData.append((generate_long_sequences(seq), 0))
           x +=1
           
     else:
-          trainData.append((generate_long_sequences(seq[1]), 1))
+          trainData.append((generate_long_sequences(seq), 1))
           y+=1
     i+=1
 print(x)

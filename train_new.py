@@ -34,11 +34,11 @@ x = 0
 y = 0
 for seq in SeqIO.parse(inputset, "fasta"):
     if train_df[i][1]!=1:
-          trainData.append((generate_long_sequences(seq[1]), 0))
+          trainData.append((generate_long_sequences(seq), 0))
           x +=1
           
     else:
-          trainData.append((generate_long_sequences(seq[1]), 1))
+          trainData.append((generate_long_sequences(seq), 1))
           y+=1
     i+=1
 
@@ -64,10 +64,19 @@ train_data,val_data = random_split(trainData,[train_size,val_size])
 print(f"Length of Train Data : {len(train_data)}")
 print(f"Length of Validation Data : {len(val_data)}")
 
-#load the train and validation into batches.
-train_dl = DataLoader(train_data, batch_size, shuffle = True, num_workers = 4, pin_memory = True)
-val_dl = DataLoader(val_data, batch_size*2, num_workers = 4, pin_memory = True)
+def collate_fn(batch):
+  return (torch.stack([x[0] for x in batch]),
+      torch.tensor([x[1] for x in batch]))
 
+
+# DataLoader(..., collate_fn=collate_fn)
+
+#load the train and validation into batches.
+# train_dl = DataLoader(train_data, batch_size, shuffle = True, num_workers = 4, pin_memory = True, collate_fn=collate_fn)
+# val_dl = DataLoader(val_data, batch_size*2, num_workers = 4, pin_memory = True, collate_fn=collate_fn)
+
+train_dl = DataLoader(train_data, shuffle=True, batch_size=batch_size)
+val_dl = DataLoader(val_data, shuffle=True, batch_size=batch_size*2)
 def accuracy(outputs, labels):
     _, preds = torch.max(outputs, dim=1)
     return torch.tensor(torch.sum(preds == labels).item() / len(preds))
