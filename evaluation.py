@@ -18,13 +18,18 @@ for opt, arg in opts:
         predfile = arg
 
 preds = []
+true = []
+true_df = pd.read_csv(truefile).to_numpy()
+print(true_df)
 with open(predfile, 'r') as f:
       for line in f:
-         preds.append(line.split(', ')[1])
+        line_list = line.split(', ')
+        preds.append(line_list[1])
+        # if true_df[line_list[0]]
+        true.append()
          
 preds = preds[1:30001]
 preds = [int(x) for x in preds]
-print(preds[30])
 
 true = []
 true_df = pd.read_csv(truefile).to_numpy()
