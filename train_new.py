@@ -9,6 +9,7 @@ import sys, getopt
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from classify import *
 
+print("i")
 try:
     opts, args = getopt.getopt(sys.argv[1:], 'm:i:l:')
 except getopt.GetoptError:
@@ -26,19 +27,25 @@ for opt, arg in opts:
  
 # set the device we will be using to train the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+print("y")
 train_df = pd.read_csv(labelset).to_numpy()
 trainData = []
 i = 0
 x = 0
 y = 0
+
+#2:40
+#42431
+max_len = max([len(seq) for seq in SeqIO.parse(inputset, "fasta")])
+
 for seq in SeqIO.parse(inputset, "fasta"):
+    add_len = max_len - len(seq)
     if train_df[i][1]!=1:
-          trainData.append((generate_long_sequences(seq), 0))
+          trainData.append((generate_long_sequences(seq+"0"*add_len), 0))
           x +=1
           
     else:
-          trainData.append((generate_long_sequences(seq), 1))
+          trainData.append((generate_long_sequences(seq+"0"*add_len), 1))
           y+=1
     i+=1
 
