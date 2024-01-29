@@ -41,11 +41,31 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 train_df = pd.read_csv(labelset).to_numpy()
 trainData = []
 i = 0
-for seq in FastqGeneralIterator(open(inputset)):
-    trainData.append((generate_long_sequences(seq[1]), train_df[i][4]))
-    i = i + 1
+x = 0
+y = 0
+for seq in SeqIO.parse(inputset, "fasta"):
+    add_len = 300
+    if train_df[i][1]!=1:
+          trainData.append((generate_long_sequences(seq+"0"*add_len)[:300], 0))
+          x +=1
+          
+    else:
+          trainData.append((generate_long_sequences(seq+"0"*add_len)[:300], 1))
+          y+=1
+    i+=1
+print(x)
+print(y)
 
-trainData = trainData[481701:491702]
+trainData = trainData[:30000]
+a = 0
+b = 0
+for x in trainData:
+	if x[1]==0:
+		a = a + 1
+	else:
+		b = b + 1
+print(a)
+print(b)
 # for row in train_df:
 #     trainData.append((generate_long_sequences(row[0]),row[1]))
 
@@ -75,22 +95,25 @@ startTime = time.time()
 # loop over our epochs
 for e in range(0, EPOCHS):
 	# set the model in training mode
-	model.train()
-	
-	# loop over the training set
-    # for step, (x,y) in enumerate(trainDataLoader):
-	for (x, y) in trainDataLoader:
-		# send the input to the device
-		(x, y) = (x.clone().detach().float().to(device), y.to(device))
-		# perform a forward pass and calculate the training loss
-		pred = torch.sigmoid(model(x))
-		loss = lossFn(pred, y)
+    model.train()
 
-        # zero out the gradients, perform the backpropagation step,
-		# and update the weights
-		opt.zero_grad()
-		loss.backward()
-		opt.step()
+	# loop over the training set 
+    for step, (x,y) in enumerate(trainDataLoader):
+    # for (x, y) in trainDataLoader:
+            # send the input to the device
+        (x, y) = (x.clone().detach().float().to(device), y.to(device))
+            # print(x)
+            # print(y)
+            # perform a forward pass and calculate the training loss
+        pred = torch.sigmoid(model(x))
+        loss = lossFn(pred, y)
+        print(loss)
+            # zero out the gradients, perform the backpropagation step,
+            # and update the weights
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+        # opt.zero_grad()
 # finish measuring how long training took
 endTime = time.time()
 print("total time taken to train the model: {:.2f}s".format(endTime - startTime))

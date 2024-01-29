@@ -17,25 +17,31 @@ for opt, arg in opts:
     elif opt in ("-p", "--predfile"):
         predfile = arg
 
-preds = []
+preds = {}
+
 with open(predfile, 'r') as f:
       for line in f:
-         preds.append(line.split(', ')[1])
-         
-preds = preds[1:]
-preds = [int(x) for x in preds]
-print(preds[30])
+        line_list = line.split(', ')
+        preds[line_list[0]] = line_list[1]
+
+del preds["id"]
 
 true = []
+pred = []
 true_df = pd.read_csv(truefile).to_numpy()
-for line in true_df:
-    true.append(int(line[4]))
+
+for line in true_df[:30000]:
+    pred.append(int(preds[line[0]]))
+    if int(line[1])!=1:
+       true.append(0)
+    else:
+       true.append(1)
          
-preds = preds[:481701]+preds[491702:]
-true = true[:481701]+true[491702:]
-print(len(preds))
-accuracy = accuracy_score(true, preds)
-tn, fp, fn, tp = confusion_matrix(true, preds).ravel()
+#preds = preds[:489319]+preds[499319:]
+#true = true[:489319]+true[499319:]
+       
+accuracy = accuracy_score(true, pred)
+tn, fp, fn, tp = confusion_matrix(true, pred).ravel()
 sens =  tp/(tp + fn)
 spec = tn/(tn + fp)
 

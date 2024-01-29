@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 import pandas as pd
 from torch.optim import Adam
 import time
+from Bio import SeqIO
 
 
 try:
@@ -48,11 +49,16 @@ for param in model.module.fc.parameters():
 train_df = pd.read_csv(labelset).to_numpy()
 trainData = []
 i = 0
-for seq in FastqGeneralIterator(open(inputset)):
-    trainData.append((generate_long_sequences(seq[1]), train_df[i][4]))
+for seq in SeqIO.parse(inputset, "fasta"):
+    if train_df[i][1]!=1:
+       trainData.append((generate_long_sequences(seq[1]), 0))
+       print("--0--")
+    else:
+       trainData.append((generate_long_sequences(seq[1]), 1))
+       print("--1--")
     i = i + 1
-
-trainData = trainData[481701:491702]
+print(i)
+trainData = trainData[:20000]
 # for row in train_df:
 #     trainData.append((generate_long_sequences(row[0]),row[1]))
 
@@ -90,5 +96,5 @@ endTime = time.time()
 print("total time taken to train the model: {:.2f}s".format(endTime - startTime))
 
 # serialize the model to disk
-modelP = nn.DataParallel(model)
-torch.save(modelP.state_dict(), newModelPath)
+#modelP = nn.DataParallel(model)
+torch.save(model.state_dict(), newModelPath)
