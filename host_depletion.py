@@ -92,7 +92,7 @@ model = nn.DataParallel(model)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model.to(device)
-print(torch.load(modelpath,device))
+# print(torch.load(modelpath,device))
 model.load_state_dict(torch.load(modelpath,device))
 model.eval()
 
@@ -135,7 +135,13 @@ for filelens in all_filelens:
                         if j == temp_batch_size:
                             X = torch.tensor(X).float().to(device)
                             with torch.cuda.amp.autocast():
-                                y_pred_oh = torch.sigmoid(model(X)).detach().cpu().numpy()[:, 1]
+                                y__=torch.softmax(model(X),dim=1).detach().cpu().numpy()
+                                # print("y_pred_oh",y__)
+                                # y_pred_oh = y__[:, 1]
+                                # print([np.where(l==np.max(l))[0][0] for l in y__])
+                                y_pred_oh = [np.where(l==np.max(l))[0][0] for l in y__]
+                                # print("y_pred_oh_after",y__[:,1])
+                                # print("y_pred_oh",y_pred_oh)
                             if track_gpu == True:
                                 gpu_usage(gpufile)
                             del X
@@ -172,7 +178,12 @@ for filelens in all_filelens:
                 if i > 0 or j > 0:
                     X = torch.tensor(X).float().to(device)
                     with torch.cuda.amp.autocast():
-                        y_pred_oh = torch.sigmoid(model(X)).detach().cpu().numpy()[:, 1]
+                        # y_pred_oh = torch.sigmoid(model(X)).detach().cpu().numpy()[:, 1]
+                        y__=torch.softmax(model(X),dim=1).detach().cpu().numpy()
+                        # print("y_pred_oh",y__)
+                        # y_pred_oh = y__[:, 1]
+                        # print([np.where(l==np.max(l))[0][0] for l in y__])
+                        y_pred_oh = [np.where(l==np.max(l))[0][0] for l in y__]
                     if track_gpu == True:
                         gpu_usage(gpufile)
                     del X
