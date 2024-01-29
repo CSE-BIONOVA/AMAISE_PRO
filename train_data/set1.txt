@@ -1,3 +1,0 @@
-shark
-host 5000
-non-host 5000

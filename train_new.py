@@ -36,22 +36,33 @@ y = 0
 
 #2:40
 #42431
+# max_len = max([len(seq) for seq in SeqIO.parse(inputset, "fasta")])
+
+# for seq in SeqIO.parse(inputset, "fasta"):
+#     add_len = max_len - len(seq)
+#     if train_df[i][1]!=1:
+#           trainData.append((generate_long_sequences(seq+"0"*add_len), 0))
+#           x +=1
+          
+#     else:
+#           trainData.append((generate_long_sequences(seq+"0"*add_len), 1))
+#           y+=1
+#     i+=1
 max_len = max([len(seq) for seq in SeqIO.parse(inputset, "fasta")])
 
 for seq in SeqIO.parse(inputset, "fasta"):
-    add_len = max_len - len(seq)
+    add_len = 300
     if train_df[i][1]!=1:
-          trainData.append((generate_long_sequences(seq+"0"*add_len), 0))
+          trainData.append((generate_long_sequences(seq+"0"*add_len)[:300], 0))
           x +=1
           
     else:
-          trainData.append((generate_long_sequences(seq+"0"*add_len), 1))
+          trainData.append((generate_long_sequences(seq+"0"*add_len)[:300], 1))
           y+=1
     i+=1
-
 print(x)
 print(y)
-
+# trainData = [x[:300] for x in trainData]
 trainData = trainData[:30000]
 a = 0
 b = 0
