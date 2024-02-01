@@ -43,29 +43,39 @@ trainData = []
 i = 0
 x = 0
 y = 0
-for seq in SeqIO.parse(inputset, "fasta"):
-    add_len = 300
-    if train_df[i][1]!=1:
-          trainData.append((generate_long_sequences(seq+"0"*add_len)[:300], 0))
-          x +=1
+# for seq in SeqIO.parse(inputset, "fasta"):
+#     add_len = 600
+#     if train_df[i][1]!=1:
+#           trainData.append((generate_long_sequences(seq+"0"*add_len)[:600], 0))
+#           x +=1
           
-    else:
-          trainData.append((generate_long_sequences(seq+"0"*add_len)[:300], 1))
-          y+=1
+#     else:
+#           trainData.append((generate_long_sequences(seq+"0"*add_len)[:600], 1))
+#           y+=1
+#     i+=1
+
+def encodeLabel(num):
+    encoded_l = np.zeros(6)
+    encoded_l[num-1] = 1
+    return encoded_l
+
+for seq in SeqIO.parse(inputset, "fasta"):
+    add_len = 600
+    trainData.append((generate_long_sequences(seq+"0"*add_len)[:600], encodeLabel(train_df[i][1])))
     i+=1
 print(x)
 print(y)
 
-trainData = trainData[:30000]
-a = 0
-b = 0
-for x in trainData:
-	if x[1]==0:
-		a = a + 1
-	else:
-		b = b + 1
-print(a)
-print(b)
+# trainData = trainData[:30000]
+# a = 0
+# b = 0
+# for x in trainData:
+# 	if x[1]==0:
+# 		a = a + 1
+# 	else:
+# 		b = b + 1
+# print(a)
+# print(b)
 # for row in train_df:
 #     trainData.append((generate_long_sequences(row[0]),row[1]))
 
@@ -105,7 +115,7 @@ for e in range(0, EPOCHS):
             # print(x)
             # print(y)
             # perform a forward pass and calculate the training loss
-        pred = torch.sigmoid(model(x))
+        pred = torch.softmax(model(x),dim=1)
         loss = lossFn(pred, y)
         print(loss)
             # zero out the gradients, perform the backpropagation step,

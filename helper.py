@@ -83,7 +83,7 @@ class TCN(ClassificationBase):
         num_input_channels = 4
         num_output_channels = 128
         filter_size = 15
-        num_classes = 2
+        num_classes = 6
         pool_amt = 5
         
         super().__init__()
@@ -272,9 +272,11 @@ write_output_paired writes the classification label of the single-end read in va
 '''
 def write_output(typefile, outputwritefile, g, id_, seq_, len_, pred_, qual_):
     final_len = closest(list(threshs.keys()), len_)
-    label = 1
-    if pred_ < threshs[final_len]:
-        label = 0
+    # label = 1
+    # if pred_ < threshs[final_len]:
+    #     label = 0
+    label = pred_+1
+    print("pred_",pred_)
     outputwritefile.write('%s, %d, %d\n'%(id_, label, len_))
     if pred_ < threshs[final_len]:
         if typefile == 'fastq':
