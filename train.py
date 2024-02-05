@@ -6,6 +6,11 @@ from torch.optim import Adam
 import time
 import sys, getopt
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
+from torch.utils.data import random_split
+from sklearn.model_selection import train_test_split
+from collections import Counter
+# import numpy as np
+
 # from torch.utils.tensorboard import SummaryWriter
 
 # construct the argument parser and parse the arguments
@@ -32,64 +37,78 @@ for opt, arg in opts:
  
 # define training hyperparameters
 INIT_LR = 1e-3
-BATCH_SIZE = 64
+BATCH_SIZE = 128
 EPOCHS = 30
 
 # set the device we will be using to train the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 train_df = pd.read_csv(labelset).to_numpy()
-trainData = []
-i = 0
-x = 0
-y = 0
-# for seq in SeqIO.parse(inputset, "fasta"):
-#     add_len = 600
-#     if train_df[i][1]!=1:
-#           trainData.append((generate_long_sequences(seq+"0"*add_len)[:600], 0))
-#           x +=1
-          
-#     else:
-#           trainData.append((generate_long_sequences(seq+"0"*add_len)[:600], 1))
-#           y+=1
-#     i+=1
+# trainData = []
 
 def encodeLabel(num):
     encoded_l = np.zeros(6)
     encoded_l[num-1] = 1
+    # print(num, encoded_l)
     return encoded_l
-
+i=0
+X = []
+y = []
 for seq in SeqIO.parse(inputset, "fasta"):
-    add_len = 600
-    trainData.append((generate_long_sequences(seq+"0"*add_len)[:600], encodeLabel(train_df[i][1])))
-    i+=1
-print(x)
-print(y)
+    add_len = 10000
+    encoded = generate_long_sequences(seq+"0"*add_len)[:10000]
+    label = encodeLabel(train_df[i][1])
+    # trainData.append((encoded, label))
+    X.append(encoded)
+    y.append(label)
 
-# trainData = trainData[:30000]
-# a = 0
-# b = 0
-# for x in trainData:
-# 	if x[1]==0:
-# 		a = a + 1
-# 	else:
-# 		b = b + 1
-# print(a)
-# print(b)
-# for row in train_df:
-#     trainData.append((generate_long_sequences(row[0]),row[1]))
+    i+=1
+
+
+# val_size = 10000
+# train_size = len(trainData) - val_size
+# train_data,val_data = random_split(trainData,[train_size,val_size])
+X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, stratify=y)
+train_data = []
+
+for i in range(len(X_train)):
+    train_data.append((X_train[i], y_train[i]))
+val_data = []
+for i in range(len(X_val)):
+    val_data.append((X_val[i], y_val[i]))
+
+# counts = {}
+# for item in y:
+#   if str(item) not in counts:
+#     counts[str(item)] = 0
+#   counts[str(item)] += 1
+
+# print(counts)
+# counts = {}
+# for item in y_train:
+#   if str(item) not in counts:
+#     counts[str(item)] = 0
+#   counts[str(item)] += 1
+
+# print(counts)
+# counts = {}
+# for item in y_val:
+#   if str(item) not in counts:
+#     counts[str(item)] = 0
+#   counts[str(item)] += 1
+
+# print(counts)
 
 # initialize the train data loader
-trainDataLoader = DataLoader(trainData, shuffle=True, batch_size=BATCH_SIZE)
+trainDataLoader = DataLoader(train_data, shuffle=True, batch_size=BATCH_SIZE)
+# initialize the validation data loader
+valDataLoader = DataLoader(val_data, shuffle=True, batch_size=BATCH_SIZE)
 # calculate steps per epoch for training set
 trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
 
 # initialize the TCN model
 print("initializing the TCN model...")
 model = TCN().to(device)
-
-# # Initialize SummaryWriter
-# writer = SummaryWriter()
 
 # initialize our optimizer and loss function
 opt = Adam(model.parameters(), lr=INIT_LR)
@@ -98,35 +117,68 @@ lossFn = nn.CrossEntropyLoss()
 print("training the network...")
 startTime = time.time()
 
-# examples = iter(trainDataLoader)
-# example_data, example_targets = examples.next()
-# writer.add_graph(model, example_data)
-# writer.close()
 # loop over our epochs
 for e in range(0, EPOCHS):
 	# set the model in training mode
     model.train()
+
+    # Initialize total_loss for each epoch
+    total_loss = 0.0
+    correct_train_predictions = 0
 
 	# loop over the training set 
     for step, (x,y) in enumerate(trainDataLoader):
     # for (x, y) in trainDataLoader:
             # send the input to the device
         (x, y) = (x.clone().detach().float().to(device), y.to(device))
-            # print(x)
-            # print(y)
             # perform a forward pass and calculate the training loss
         pred = torch.softmax(model(x),dim=1)
         loss = lossFn(pred, y)
-        print(loss)
+        # print(loss.item())  # Print the current loss value
+        total_loss += loss.item()  # Accumulate the loss for the epoch
             # zero out the gradients, perform the backpropagation step,
             # and update the weights
+        # calculate correct predictions
+        _, predicted_labels = torch.max(pred, 1)
+        _, true_labels = torch.max(y, 1)
+        # print("true_labels", true_labels)
+        # /rint("predicted_labels", predicted_labels)
+        correct_train_predictions += (predicted_labels == true_labels).sum().item()
+        # print("correct_train_predictions", correct_train_predictions)
         opt.zero_grad()
         loss.backward()
         opt.step()
         # opt.zero_grad()
+    # print(f'Epoch {e+1}/{EPOCHS}, Total Training Loss: {total_loss}')
+    
+    model.eval()
+
+    # Initialize total validation loss for each epoch
+    total_val_loss = 0.0
+    correct_val_predictions = 0
+
+    # loop over the validation set
+    with torch.no_grad():
+        for val_x, val_y in valDataLoader:
+            val_x, val_y = val_x.clone().detach().float().to(device), val_y.to(device)
+            
+            # perform a forward pass and calculate the validation loss
+            val_pred = torch.softmax(model(val_x), dim=1)
+            val_loss = lossFn(val_pred, val_y)
+            total_val_loss += val_loss.item()
+
+            _, predicted_val_labels = torch.max(val_pred, 1)
+            _, true_val_labels = torch.max(val_y, 1)
+            correct_val_predictions += (predicted_val_labels == true_val_labels).sum().item()
+
+    # Calculate and print the validation loss for the epoch
+    # avg_val_loss = total_val_loss / len(valDataLoader)
+    train_accuracy = correct_train_predictions / len(trainDataLoader.dataset)
+    val_accuracy = correct_val_predictions / len(valDataLoader.dataset)
+    print(f'Epoch {e+1}/{EPOCHS}, Total Training Loss: {total_loss}, Train Accuracy: {train_accuracy} Total Validation Loss: {total_val_loss}, Validation Accuracy: {val_accuracy}')
 # finish measuring how long training took
 endTime = time.time()
-print("total time taken to train the model: {:.2f}s".format(endTime - startTime))
+print("total time taken to train the model: {:.2f}s".format((endTime - startTime)/60))
 
 # serialize the model to disk
 modelP = nn.DataParallel(model)
