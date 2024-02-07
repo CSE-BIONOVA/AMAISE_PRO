@@ -38,7 +38,7 @@ for opt, arg in opts:
 # define training hyperparameters
 INIT_LR = 1e-3
 BATCH_SIZE = 128
-EPOCHS = 30
+EPOCHS = 50
 
 # set the device we will be using to train the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -116,7 +116,7 @@ lossFn = nn.CrossEntropyLoss()
 # measure how long training is going to take
 print("training the network...")
 startTime = time.time()
-
+max_val_acc = 0
 # loop over our epochs
 for e in range(0, EPOCHS):
 	# set the model in training mode
@@ -159,7 +159,7 @@ for e in range(0, EPOCHS):
 
     # loop over the validation set
     with torch.no_grad():
-        for val_x, val_y in valDataLoader:
+        for step, (val_x, val_y) in enumerate(valDataLoader):
             val_x, val_y = val_x.clone().detach().float().to(device), val_y.to(device)
             
             # perform a forward pass and calculate the validation loss
@@ -176,10 +176,14 @@ for e in range(0, EPOCHS):
     train_accuracy = correct_train_predictions / len(trainDataLoader.dataset)
     val_accuracy = correct_val_predictions / len(valDataLoader.dataset)
     print(f'Epoch {e+1}/{EPOCHS}, Total Training Loss: {total_loss}, Train Accuracy: {train_accuracy} Total Validation Loss: {total_val_loss}, Validation Accuracy: {val_accuracy}')
+    if max_val_acc < val_accuracy:
+        max_val_acc = val_accuracy
+        modelP = nn.DataParallel(model)
+        torch.save(modelP.state_dict(), newModelPath)
 # finish measuring how long training took
 endTime = time.time()
 print("total time taken to train the model: {:.2f}s".format((endTime - startTime)/60))
 
-# serialize the model to disk
-modelP = nn.DataParallel(model)
-torch.save(modelP.state_dict(), newModelPath)
+# # serialize the model to disk
+# modelP = nn.DataParallel(model)
+# torch.save(modelP.state_dict(), newModelPath)
