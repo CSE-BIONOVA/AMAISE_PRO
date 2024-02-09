@@ -39,19 +39,17 @@ for opt, arg in opts:
  
 # define training hyperparameters
 INIT_LR = 1e-3
-BATCH_SIZE = 128
+BATCH_SIZE = 1024
 EPOCHS = 50
 
 # set the device we will be using to train the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 train_df = pd.read_csv(labelset).to_numpy()
-# trainData = []
 
 def encodeLabel(num):
     encoded_l = np.zeros(6)
     encoded_l[num] = 1
-    # print(num, encoded_l)
     return encoded_l
 i=0
 X = []
@@ -66,13 +64,10 @@ for seq in SeqIO.parse(inputset, "fasta"):
         add_len = add_len - lenOfSeq
         encoded = generate_long_sequences(seq + "0"*add_len )
     label = encodeLabel(train_df[i][1])
-    # trainData.append((encoded, label))
     X.append(encoded)
     y.append(label)
 
     i+=1
-
-
 
 X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, stratify=y)
 train_data = []
@@ -135,23 +130,20 @@ for e in range(0, EPOCHS):
 	# loop over the training set 
     for step, (x,y) in enumerate(trainDataLoader):
     # for (x, y) in trainDataLoader:
-            # send the input to the device
+        # send the input to the device
         (x, y) = (x.clone().detach().float().to(device), y.to(device))
-            # perform a forward pass and calculate the training loss
+        # perform a forward pass and calculate the training loss
         # pred = torch.softmax(model(x),dim=1)
         pred = model(x)
         loss = lossFn(pred, y)
         # print(loss.item())  # Print the current loss value
         total_loss += loss.item()  # Accumulate the loss for the epoch
-            # zero out the gradients, perform the backpropagation step,
-            # and update the weights
+        # zero out the gradients, perform the backpropagation step,
+        # and update the weights
         # calculate correct predictions
         _, predicted_labels = torch.max(pred, 1)
         _, true_labels = torch.max(y, 1)
-        # print("true_labels", true_labels)
-        # /rint("predicted_labels", predicted_labels)
         correct_train_predictions += (predicted_labels == true_labels).sum().item()
-        # print("correct_train_predictions", correct_train_predictions)
         opt.zero_grad()
         loss.backward()
         opt.step()

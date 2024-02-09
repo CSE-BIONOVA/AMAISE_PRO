@@ -30,7 +30,7 @@ for opt, arg in opts:
         result_path = arg
  
 INIT_LR = 1e-3
-BATCH_SIZE = 64
+BATCH_SIZE = 1024
 EPOCHS = 30 
         
 # Load AMAISE onto GPUs

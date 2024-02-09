@@ -22,7 +22,7 @@ for opt, arg in opts:
     elif opt in ("-o", "--outfolder"):
         result_path = arg
 
-BATCH_SIZE = 128
+BATCH_SIZE = 1024
 model = TCN()
 model = nn.DataParallel(model)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
