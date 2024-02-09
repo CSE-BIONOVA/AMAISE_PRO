@@ -17,10 +17,13 @@ go to MultiClzImpl branch
 
 python3 train.py -m **modelNameWithPath** -i **trainsetWithPath** -l **labelsetWithPath** -o **filenameWithPath**
 
-**modelNameWithPath** = model name with path to save the model
-**trainsetWithPath** = .fasta file (train set)
-**labelsetWithPath** = .csv file (train set)
-**filenameWithPath** = file name with path to save the results
+- **modelNameWithPath** = model name with path to save the model
+
+- **trainsetWithPath** = .fasta file (train set)
+
+- **labelsetWithPath** = .csv file (train set)
+
+- **filenameWithPath** = file name with path to save the results
 
 ex: 
 
@@ -32,11 +35,15 @@ python3 train.py -m ../Models/human_model -i ../Final_dataset/human_train/human_
 
 python3 tltrain.py -m **existingModelNameWithPath** -i **trainsetWithPath** -l **labelsetWithPath** -n **newModelNameWithPath** -o **filenameWithPath**
 
-**existingModelNameWithPath** = existing model name with path
-**trainsetWithPath** = .fasta file (train set)
-**labelsetWithPath** = .csv file (train set)
-**newModelNameWithPath** = model name with path to save the new model
-**filenameWithPath** = file name with path to save the results
+- **existingModelNameWithPath** = existing model name with path
+
+- **trainsetWithPath** = .fasta file (train set)
+
+- **labelsetWithPath** = .csv file (train set)
+
+- **newModelNameWithPath** = model name with path to save the new model
+
+- **filenameWithPath** = file name with path to save the results
 
 ex:
 
@@ -47,10 +54,13 @@ python3 tltrain.py -m ../Models/human_model -i .Final_dataset/shark_train/shark_
 
 python3 test_model.py -m **existingModelNameWithPath** -i **testsetWithPath** -l **labelsetWithPath** -o **filenameWithPath**
 
-**modelNameWithPath** = existing model name with path
-**testsetWithPath** = .fasta file (test set)
-**labelsetWithPath** = .csv file (test set)
-**filenameWithPath** = file name with path to save the results
+- **modelNameWithPath** = existing model name with path
+
+- **testsetWithPath** = .fasta file (test set)
+
+- **labelsetWithPath** = .csv file (test set)
+
+- **filenameWithPath** = file name with path to save the results
 
 ex: 
 
