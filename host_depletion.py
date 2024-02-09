@@ -180,9 +180,6 @@ for filelens in all_filelens:
                     with torch.cuda.amp.autocast():
                         # y_pred_oh = torch.sigmoid(model(X)).detach().cpu().numpy()[:, 1]
                         y__=torch.softmax(model(X),dim=1).detach().cpu().numpy()
-                        # print("y_pred_oh",y__)
-                        # y_pred_oh = y__[:, 1]
-                        # print([np.where(l==np.max(l))[0][0] for l in y__])
                         y_pred_oh = [np.where(l==np.max(l))[0][0] for l in y__]
                     if track_gpu == True:
                         gpu_usage(gpufile)

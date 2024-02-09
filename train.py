@@ -21,7 +21,7 @@ from collections import Counter
 # args = vars(ap.parse_args())
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], 'm:i:l:')
+    opts, args = getopt.getopt(sys.argv[1:], 'm:i:l:o:')
 except getopt.GetoptError:
     sys.exit(2)
     
@@ -34,7 +34,9 @@ for opt, arg in opts:
         inputset = arg
     elif opt in ("-l", "--labels"):
         labelset = arg
- 
+    elif opt in ("-o", "--out"):
+        result_path = arg
+print(result_path)
 # define training hyperparameters
 INIT_LR = 1e-3
 BATCH_SIZE = 128
@@ -117,6 +119,7 @@ lossFn = nn.CrossEntropyLoss()
 print("training the network...")
 startTime = time.time()
 max_val_acc = 0
+file = open(result_path, 'a')
 # loop over our epochs
 for e in range(0, EPOCHS):
 	# set the model in training mode
@@ -176,14 +179,16 @@ for e in range(0, EPOCHS):
     train_accuracy = correct_train_predictions / len(trainDataLoader.dataset)
     val_accuracy = correct_val_predictions / len(valDataLoader.dataset)
     print(f'Epoch {e+1}/{EPOCHS}, Total Training Loss: {total_loss}, Train Accuracy: {train_accuracy} Total Validation Loss: {total_val_loss}, Validation Accuracy: {val_accuracy}')
+    file.write(f'Epoch {e+1}/{EPOCHS}, Total Training Loss: {total_loss}, Train Accuracy: {train_accuracy} Total Validation Loss: {total_val_loss}, Validation Accuracy: {val_accuracy}\n')
     if max_val_acc < val_accuracy:
         max_val_acc = val_accuracy
         modelP = nn.DataParallel(model)
         torch.save(modelP.state_dict(), newModelPath)
 # finish measuring how long training took
 endTime = time.time()
-print("total time taken to train the model: {:.2f}s".format((endTime - startTime)/60))
-
+print("total time taken to train the model: {:.2f}min".format((endTime - startTime)/60))
+file.write("total time taken to train the model: {:.2f}min\n".format((endTime - startTime)/60))
+file.close()
 # # serialize the model to disk
 # modelP = nn.DataParallel(model)
 # torch.save(modelP.state_dict(), newModelPath)
