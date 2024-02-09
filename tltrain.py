@@ -44,7 +44,7 @@ trainData = []
 
 def encodeLabel(num):
     encoded_l = np.zeros(6)
-    encoded_l[num-1] = 1
+    encoded_l[num] = 1
     # print(num, encoded_l)
     return encoded_l
 
@@ -52,8 +52,8 @@ i=0
 X = []
 y = []
 for seq in SeqIO.parse(inputset, "fasta"):
-    add_len = 10000
-    encoded = generate_long_sequences(seq+"0"*add_len)[:10000]
+    add_len = 9000
+    encoded = generate_long_sequences(seq+"0"*add_len)[:add_len]
     label = encodeLabel(train_df[i][1])
     # trainData.append((encoded, label))
     X.append(encoded)
@@ -79,7 +79,7 @@ valDataLoader = DataLoader(val_data, shuffle=True, batch_size=BATCH_SIZE)
 # calculate steps per epoch for training set
 # trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
 
-model.to(device)
+
 model.load_state_dict(torch.load(modelpath, device))
 model.module.fc = nn.Linear(model.module.fc.in_features, 6)
 
@@ -88,7 +88,7 @@ for param in model.parameters():
 for param in model.module.fc.parameters():
     param.requires_grad = True   
 # model.module.fc.requires_grad = True
-    
+model.to(device)
 opt = Adam(model.parameters(), lr=INIT_LR)
 lossFn = nn.CrossEntropyLoss()
 # measure how long training is going to take
@@ -155,8 +155,8 @@ for e in range(0, EPOCHS):
         torch.save(model.state_dict(), newModelPath)
 # finish measuring how long training took
 endTime = time.time()
-print("total time taken to train the model: {:.2f}min".format((endTime - startTime)/60))
-file.write("total time taken to train the model: {:.2f}min\n".format((endTime - startTime)/60))
+print("total time taken to train the model: {:.2f} min".format((endTime - startTime)/60))
+file.write("total time taken to train the model: {:.2f} min\n".format((endTime - startTime)/60))
 file.close()
 # serialize the model to disk
 #modelP = nn.DataParallel(model)

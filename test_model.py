@@ -26,8 +26,9 @@ BATCH_SIZE = 128
 model = TCN()
 model = nn.DataParallel(model)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model.to(device)
+
 model.load_state_dict(torch.load(modelpath,device))
+model.to(device)
 model.eval()
 
 label_df = pd.read_csv(labelset).to_numpy()
@@ -42,8 +43,8 @@ i=0
 # y = []
 test_data = []
 for seq in SeqIO.parse(inputset, "fasta"):
-    add_len = 10000
-    encoded = generate_long_sequences(seq+"0"*add_len)[:10000]
+    add_len = 9000
+    encoded = generate_long_sequences(seq+"0"*add_len)[:add_len]
     label = encodeLabel(label_df[i][1])
     test_data.append((encoded, label))
     # X.append(encoded)
@@ -63,13 +64,14 @@ with torch.no_grad():
 
         _, predicted_labels = torch.max(pred, 1)
         _, true_labels = torch.max(test_y, 1)
-        predicted.extend(predicted_labels)
-        true.extend(true_labels)
+        predicted.extend(predicted_labels.cpu())
+        true.extend(true_labels.cpu())
         correct_test_predictions += (predicted_labels == true_labels).sum().item()
 
 test_accuracy = correct_test_predictions / len(testDataLoader.dataset)
 print("Accuracy: ", test_accuracy)
-file.write("Accuracy: ", test_accuracy , "\n")
+file.write("Accuracy: {:.2f}\n".format(test_accuracy))
+
 print(classification_report(true, predicted, target_names = ['1','2','3','4','5','6']))
 file.write(classification_report(true, predicted, target_names = ['1','2','3','4','5','6']))
 file.close()

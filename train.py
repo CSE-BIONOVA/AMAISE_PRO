@@ -36,7 +36,7 @@ for opt, arg in opts:
         labelset = arg
     elif opt in ("-o", "--out"):
         result_path = arg
-print(result_path)
+ 
 # define training hyperparameters
 INIT_LR = 1e-3
 BATCH_SIZE = 128
@@ -50,15 +50,21 @@ train_df = pd.read_csv(labelset).to_numpy()
 
 def encodeLabel(num):
     encoded_l = np.zeros(6)
-    encoded_l[num-1] = 1
+    encoded_l[num] = 1
     # print(num, encoded_l)
     return encoded_l
 i=0
 X = []
 y = []
+
 for seq in SeqIO.parse(inputset, "fasta"):
-    add_len = 10000
-    encoded = generate_long_sequences(seq+"0"*add_len)[:10000]
+    add_len = 9000
+    lenOfSeq = len(seq)
+    if (lenOfSeq-add_len) > 0:
+        encoded = generate_long_sequences(seq[:add_len]) 
+    else:
+        add_len = add_len - lenOfSeq
+        encoded = generate_long_sequences(seq + "0"*add_len )
     label = encodeLabel(train_df[i][1])
     # trainData.append((encoded, label))
     X.append(encoded)
@@ -67,9 +73,7 @@ for seq in SeqIO.parse(inputset, "fasta"):
     i+=1
 
 
-# val_size = 10000
-# train_size = len(trainData) - val_size
-# train_data,val_data = random_split(trainData,[train_size,val_size])
+
 X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, stratify=y)
 train_data = []
 
@@ -107,10 +111,10 @@ trainDataLoader = DataLoader(train_data, shuffle=True, batch_size=BATCH_SIZE)
 valDataLoader = DataLoader(val_data, shuffle=True, batch_size=BATCH_SIZE)
 # calculate steps per epoch for training set
 trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
-
+file = open(result_path,'a')
 # initialize the TCN model
 print("initializing the TCN model...")
-model = TCN().to(device)
+model = nn.DataParallel(TCN()).to(device)
 
 # initialize our optimizer and loss function
 opt = Adam(model.parameters(), lr=INIT_LR)
@@ -119,7 +123,6 @@ lossFn = nn.CrossEntropyLoss()
 print("training the network...")
 startTime = time.time()
 max_val_acc = 0
-file = open(result_path, 'a')
 # loop over our epochs
 for e in range(0, EPOCHS):
 	# set the model in training mode
@@ -135,7 +138,8 @@ for e in range(0, EPOCHS):
             # send the input to the device
         (x, y) = (x.clone().detach().float().to(device), y.to(device))
             # perform a forward pass and calculate the training loss
-        pred = torch.softmax(model(x),dim=1)
+        # pred = torch.softmax(model(x),dim=1)
+        pred = model(x)
         loss = lossFn(pred, y)
         # print(loss.item())  # Print the current loss value
         total_loss += loss.item()  # Accumulate the loss for the epoch
@@ -166,7 +170,7 @@ for e in range(0, EPOCHS):
             val_x, val_y = val_x.clone().detach().float().to(device), val_y.to(device)
             
             # perform a forward pass and calculate the validation loss
-            val_pred = torch.softmax(model(val_x), dim=1)
+            val_pred = model(val_x)
             val_loss = lossFn(val_pred, val_y)
             total_val_loss += val_loss.item()
 
@@ -182,12 +186,12 @@ for e in range(0, EPOCHS):
     file.write(f'Epoch {e+1}/{EPOCHS}, Total Training Loss: {total_loss}, Train Accuracy: {train_accuracy} Total Validation Loss: {total_val_loss}, Validation Accuracy: {val_accuracy}\n')
     if max_val_acc < val_accuracy:
         max_val_acc = val_accuracy
-        modelP = nn.DataParallel(model)
-        torch.save(modelP.state_dict(), newModelPath)
+        # modelP = nn.DataParallel(model)
+        torch.save(model.state_dict(), newModelPath)
 # finish measuring how long training took
 endTime = time.time()
-print("total time taken to train the model: {:.2f}min".format((endTime - startTime)/60))
-file.write("total time taken to train the model: {:.2f}min\n".format((endTime - startTime)/60))
+print("total time taken to train the model: {:.2f} min".format((endTime - startTime)/60))
+file.write("total time taken to train the model: {:.2f} min\n".format((endTime - startTime)/60))
 file.close()
 # # serialize the model to disk
 # modelP = nn.DataParallel(model)
