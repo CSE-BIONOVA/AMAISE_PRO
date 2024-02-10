@@ -178,8 +178,8 @@ for e in range(0, EPOCHS):
     # calculate the average training and validation loss
     avgTrainLoss = total_loss / trainSteps
     avgValLoss = total_val_loss / valSteps
-    print(f'Epoch {e+1}/{EPOCHS}, Training Loss: {avgTrainLoss}, Train Accuracy: {train_accuracy} Validation Loss: {avgValLoss}, Validation Accuracy: {val_accuracy}')
-    file.write(f'Epoch {e+1}/{EPOCHS}, Training Loss: {avgTrainLoss}, Train Accuracy: {train_accuracy} Validation Loss: {avgValLoss}, Validation Accuracy: {val_accuracy}\n')
+    print(f'Epoch {e+1}/{EPOCHS}, Training Loss: {avgTrainLoss}, Train Accuracy: {train_accuracy}, Validation Loss: {avgValLoss}, Validation Accuracy: {val_accuracy}')
+    file.write(f'Epoch {e+1}/{EPOCHS}, Training Loss: {avgTrainLoss}, Train Accuracy: {train_accuracy}, Validation Loss: {avgValLoss}, Validation Accuracy: {val_accuracy}\n')
     if max_val_acc < val_accuracy:
         max_val_acc = val_accuracy
         # modelP = nn.DataParallel(model)

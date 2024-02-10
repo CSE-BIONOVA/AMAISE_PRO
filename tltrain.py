@@ -76,8 +76,9 @@ for i in range(len(X_val)):
 trainDataLoader = DataLoader(train_data, shuffle=True, batch_size=BATCH_SIZE)
 # initialize the validation data loader
 valDataLoader = DataLoader(val_data, shuffle=True, batch_size=BATCH_SIZE)
-# calculate steps per epoch for training set
-# trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
+# calculate steps per epoch for training and validation set
+trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
+valSteps = len(valDataLoader.dataset) // BATCH_SIZE
 
 
 model.load_state_dict(torch.load(modelpath, device))
@@ -148,8 +149,11 @@ for e in range(0, EPOCHS):
 
     train_accuracy = correct_train_predictions / len(trainDataLoader.dataset)
     val_accuracy = correct_val_predictions / len(valDataLoader.dataset)
-    print(f'Epoch {e+1}/{EPOCHS}, Total Training Loss: {total_loss}, Train Accuracy: {train_accuracy} Total Validation Loss: {total_val_loss}, Validation Accuracy: {val_accuracy}')
-    file.write(f'Epoch {e+1}/{EPOCHS}, Total Training Loss: {total_loss}, Train Accuracy: {train_accuracy} Total Validation Loss: {total_val_loss}, Validation Accuracy: {val_accuracy}\n')
+    # calculate the average training and validation loss
+    avgTrainLoss = total_loss / trainSteps
+    avgValLoss = total_val_loss / valSteps
+    print(f'Epoch {e+1}/{EPOCHS}, Training Loss: {avgTrainLoss}, Train Accuracy: {train_accuracy}, Validation Loss: {avgValLoss}, Validation Accuracy: {val_accuracy}')
+    file.write(f'Epoch {e+1}/{EPOCHS}, Training Loss: {avgTrainLoss}, Train Accuracy: {train_accuracy}, Validation Loss: {avgValLoss}, Validation Accuracy: {val_accuracy}\n')
     if max_val_acc < val_accuracy:
         max_val_acc = val_accuracy
         torch.save(model.state_dict(), newModelPath)
