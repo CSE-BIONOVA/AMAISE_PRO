@@ -104,8 +104,9 @@ for i in range(len(X_val)):
 trainDataLoader = DataLoader(train_data, shuffle=True, batch_size=BATCH_SIZE)
 # initialize the validation data loader
 valDataLoader = DataLoader(val_data, shuffle=True, batch_size=BATCH_SIZE)
-# calculate steps per epoch for training set
+# calculate steps per epoch for training and validation set
 trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
+valSteps = len(valDataLoader.dataset) // BATCH_SIZE
 file = open(result_path,'a')
 # initialize the TCN model
 print("initializing the TCN model...")
@@ -174,8 +175,11 @@ for e in range(0, EPOCHS):
     # avg_val_loss = total_val_loss / len(valDataLoader)
     train_accuracy = correct_train_predictions / len(trainDataLoader.dataset)
     val_accuracy = correct_val_predictions / len(valDataLoader.dataset)
-    print(f'Epoch {e+1}/{EPOCHS}, Total Training Loss: {total_loss}, Train Accuracy: {train_accuracy} Total Validation Loss: {total_val_loss}, Validation Accuracy: {val_accuracy}')
-    file.write(f'Epoch {e+1}/{EPOCHS}, Total Training Loss: {total_loss}, Train Accuracy: {train_accuracy} Total Validation Loss: {total_val_loss}, Validation Accuracy: {val_accuracy}\n')
+    # calculate the average training and validation loss
+    avgTrainLoss = total_loss / trainSteps
+    avgValLoss = total_val_loss / valSteps
+    print(f'Epoch {e+1}/{EPOCHS}, Training Loss: {avgTrainLoss}, Train Accuracy: {train_accuracy} Validation Loss: {avgValLoss}, Validation Accuracy: {val_accuracy}')
+    file.write(f'Epoch {e+1}/{EPOCHS}, Training Loss: {avgTrainLoss}, Train Accuracy: {train_accuracy} Validation Loss: {avgValLoss}, Validation Accuracy: {val_accuracy}\n')
     if max_val_acc < val_accuracy:
         max_val_acc = val_accuracy
         # modelP = nn.DataParallel(model)
