@@ -1,43 +1,70 @@
 # AMAISE_PRO
 
+When using the server, 
+```sh
 cd Documents/codes/AMAISE_PRO
-go to ErrorTesting branch
+```
+## Requirements
+
+To install required libraries and packages,
+
+```sh
+pip install requirements.txt
+```
+go to MultiClzImpl branch
 
 ## for original training
 
-python3 train.py -m **modelNameWithPath** -i **trainsetWithPath** -l **labelsetWithPath**
+python3 train.py -m **modelNameWithPath** -i **trainsetWithPath** -l **labelsetWithPath** -o **filenameWithPath**
 
- or
+- **modelNameWithPath** = model name with path to save the model
 
-python3 train_new.py -m **modelNameWithPath** -i **trainsetWithPath** -l **labelsetWithPath**
+- **trainsetWithPath** = .fasta file (train set)
+
+- **labelsetWithPath** = .csv file (train set)
+
+- **filenameWithPath** = file name with path to save the results
 
 ex: 
 
-python3 train.py -m ../../TestResults/human_test/human_test_model -i ../../Metagenome/human/human_metagenome.fasta -l ../../Metagenome/human/human_metagenome.csv
-
+```sh
+python3 train.py -m ../Models/human_model -i ../Final_dataset/human_train/human_train.fasta -l ../Final_dataset/human_train/human_train_labels.csv -o ../TestResults/result.txt
+```
 
 ## Transfer Learning
 
-python3 tltrain.py -m **existingModelNameWithPath** -i **trainsetWithPath** -l **labelsetWithPath** -n **newModelNameWithPath**
+python3 tltrain.py -m **existingModelNameWithPath** -i **trainsetWithPath** -l **labelsetWithPath** -n **newModelNameWithPath** -o **filenameWithPath**
+
+- **existingModelNameWithPath** = existing model name with path
+
+- **trainsetWithPath** = .fasta file (train set)
+
+- **labelsetWithPath** = .csv file (train set)
+
+- **newModelNameWithPath** = model name with path to save the new model
+
+- **filenameWithPath** = file name with path to save the results
 
 ex:
 
-python3 tltrain.py -m models_and_references/single_end_model -i ../../Metagenome/shark/train/shark_metagenome.fasta -l ../../Metagenome/shark/train/shark_metagenome.csv -n ../../TestResults/human_test_tl/human_test_tl_model
-
+```sh
+python3 tltrain.py -m ../Models/human_model -i .Final_dataset/shark_train/shark_train.fasta -l ../Final_dataset/shark_train/shark_train_labels.csv -n ../Models/shark_model -o ../TestResults/result_tl.txt
+```
 ## for testing
 
-python3 host_depletion.py -i **inputfile** -t **typefile** -o **outfolder** -m **model**
+python3 test_model.py -m **existingModelNameWithPath** -i **testsetWithPath** -l **labelsetWithPath** -o **filenameWithPath**
 
-ex:
+- **modelNameWithPath** = existing model name with path
 
-python3 host_depletion.py -i ../../Metagenome/human/human_metagenome.fasta -t fasta -o ../../TestResults/human_test/train -m ../../TestResults/human_test/human_test_model
+- **testsetWithPath** = .fasta file (test set)
 
-## for evaluating
+- **labelsetWithPath** = .csv file (test set)
 
-python3 evaluation.py -o **fileToWrite** -t **truefile** -p **predfile**
+- **filenameWithPath** = file name with path to save the results
 
-ex:
+ex: 
 
-python3 evaluation.py -o ../../TestResults/human_test/train/eval_sum.txt -t ../../Metagenome/human/human_metagenome.csv -p ../../TestResults/human_test/train/mlprobs.txt
-
+```sh
+python3 test_model.py -m ../Models/human_model -i ../Final_dataset/human_test/human_test.fasta -l ../Final_dataset/human_test/human_test_labels.csv -o ../TestResults/result_test.txt
+```
 

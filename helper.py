@@ -276,7 +276,7 @@ def write_output(typefile, outputwritefile, g, id_, seq_, len_, pred_, qual_):
     # if pred_ < threshs[final_len]:
     #     label = 0
     label = pred_+1
-    print("pred_",pred_)
+    # print("pred_",pred_)
     outputwritefile.write('%s, %d, %d\n'%(id_, label, len_))
     if pred_ < threshs[final_len]:
         if typefile == 'fastq':
