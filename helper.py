@@ -142,6 +142,45 @@ class TCN(ClassificationBase):
         output = self.fc(output)
         return output
 
+
+class CombinationalBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1):
+        super(CombinationalBlock, self).__init__()
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=1)
+        self.batch_norm = nn.BatchNorm2d(out_channels)
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.batch_norm(x)
+        x = self.relu(x)
+        return x
+
+
+class CNNModel(nn.Module):
+    def __init__(self, num_classes):
+        super(CNNModel, self).__init__()
+        self.conv1 = CombinationalBlock(3, 64)  # Input channels = 3 (RGB)
+        self.max_pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.conv_block2 = CombinationalBlock(64, 2048)
+        self.k_max_pool = nn.AdaptiveMaxPool2d((8, 8))  # K-max pooling with window size 8x8
+        self.conv_block3 = CombinationalBlock(2048, 64)
+        self.dense1 = nn.Linear(2048, num_classes)  # Dense layer with num_classes output neurons
+        self.softmax = nn.Softmax(dim=1)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.max_pool(x)
+        x = self.conv_block2(x)
+        x = self.k_max_pool(x)
+        x = self.conv_block3(x)
+        x = x.view(x.size(0), -1)  # Flatten the output of the convolutional layers
+        x = self.dense1(x)
+        x = self.softmax(x)
+        return x
+
+
+
 '''
 Inputs:
 typefile: 'fastq' if testfile is a fastq files, and 'fasta' if testfile is a fasta files

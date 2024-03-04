@@ -149,8 +149,8 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate):
     valSteps = len(valDataLoader.dataset) // BATCH_SIZE
     file = open(resultPath,'a')
     # initialize the TCN model
-    logger.info("initializing the TCN model...")
-    model = nn.DataParallel(TCN()).to(device)
+    logger.info("initializing the Deep CNN model...")
+    model = nn.DataParallel(CNNModel(6)).to(device)
 
     # initialize our optimizer and loss function
     opt = Adam(model.parameters(), lr=INIT_LR)
