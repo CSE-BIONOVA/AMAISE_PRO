@@ -64,6 +64,7 @@ import numpy as np
     required = False,
 )
 @click.help_option('--help', "-h", help = "Show this message and exit")
+
 def main(input, labels, model, output, batch_size, epoches, learning_rate):
     
     newModelPath = model
@@ -115,7 +116,7 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate):
     startTime = time.time()
     
     for seq in SeqIO.parse(inputset, "fasta"):
-        add_len = 9000
+        add_len = 5000
         lenOfSeq = len(seq)
         if (lenOfSeq-add_len) > 0:
             encoded = generate_long_sequences(seq[:add_len]) 
@@ -129,7 +130,8 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate):
         i+=1
     
     endTime = time.time()
-    logger.info("Total time taken to parse data: {:.2f} min".format({endTime - startTime}/60))
+    encoding_time_diff = (endTime - startTime)/60
+    logger.info(f"Total time taken to parse data: {encoding_time_diff} min")
     
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, stratify=y)
     train_data = []
@@ -147,7 +149,7 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate):
     # calculate steps per epoch for training and validation set
     trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
     valSteps = len(valDataLoader.dataset) // BATCH_SIZE
-    file = open(resultPath,'a')
+    #file = open(resultPath,'a')
     # initialize the TCN model
     logger.info("initializing the Deep CNN model...")
     model = nn.DataParallel(CNNModel(6)).to(device)
@@ -234,7 +236,8 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate):
             torch.save(model.state_dict(), newModelPath)
     # finish measuring how long training took
     endTime = time.time()
-    logger.info("total time taken to train the model: {:.2f} min".format((endTime - startTime)/60))
+    train_time_diff = (endTime - startTime)/60
+    logger.info(f"total time taken to train the model: {train_time_diff} min")
     
     # serialize the model to disk
     # modelP = nn.DataParallel(model)
@@ -245,7 +248,7 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate):
     plt.plot(epoch_list, train_losses, label="Training loss")
     plt.plot(epoch_list, validation_losses, label="Validation loss")
     plt.xlabel("Epoch")
-    plt.ylabel("Loss")
+    plt.ylabel("Accuracy")
     plt.legend(loc="upper right")
     plt.savefig(f"{resultPath}_losses.png", dpi=300, bbox_inches='tight')
     
