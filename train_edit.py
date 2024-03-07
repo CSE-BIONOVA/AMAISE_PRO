@@ -116,7 +116,7 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
     
     logger.info(f"Device: {device}")
     
-    train_df = pd.read_csv(labelset).to_numpy()
+    train_df = pd.read_csv(labelset)
     train_label_dict = {train_df['id'][i]: train_df['y_true'][i] for i in range(len(train_df))}
     
     X, y = [], []
@@ -132,11 +132,15 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
             encoded = generate_onehot_encoding(seq[:add_len]) 
         else:
             add_len = add_len - lenOfSeq
-            encoded = generate_onehot_encoding(seq + "0"*add_len )
+            encoded = generate_onehot_encoding(seq + "N"*add_len )
         label = encodeLabel(train_label_dict[seq.id])
         X.append(encoded)
         y.append(label)
     
+    input_tensor_dict = {"X": X, "y": y}
+    torch.save(input_tensor_dict, f"{resultPath}_input_tensor_dict.pt")
+    print(f"Saved input tensor dict to {resultPath}_input_tensor_dict.pt")
+
     endTime = time.time()
     encoding_time_diff = (endTime - startTime)/60
     logger.info(f"Total time taken to parse data: {encoding_time_diff} min")
@@ -158,9 +162,8 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
     valSteps = len(valDataLoader.dataset) // BATCH_SIZE
     
     logger.info("initializing the Deep CNN model...")
-    model = nn.DataParallel(DeepCNN(6)).to(device)
+    model = nn.DataParallel(DeepCNN(max_len=max_length)).to(device)
 
-    
     opt = Adam(model.parameters(), lr=INIT_LR)
     lossFn = nn.CrossEntropyLoss()
     

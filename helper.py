@@ -83,7 +83,7 @@ def generate_onehot_encoding(sequence):
 
 def encodeLabel(num):
     encoded_l = np.zeros(6)
-    encoded_l[num] = 1
+    encoded_l[num-1] = 1
     return torch.ByteTensor(encoded_l)
 
 
@@ -183,8 +183,9 @@ class TCN(ClassificationBase):
 #         return x
     
 class DeepCNN(nn.Module):
-    def __init__(self, num_classes,
-                 max_len=10000,
+    def __init__(self, 
+                 num_classes = 6,
+                 max_len=9000,
                  cnn_filter_size=(3, 3, 3, 3),
                  pooling_filter_size=(2, 2, 2, 2),
                  num_filters_per_size=(64, 128, 256, 512),
@@ -213,7 +214,7 @@ class DeepCNN(nn.Module):
         self.fc3 = nn.Linear(2048, self.num_classes)
 
     def forward(self, x):
-        x = x.view(-1, 4, self.max_len, 1)
+        x = x.reshape(-1, 4, self.max_len, 1)
         x = F.relu(self.bn0(self.conv0(x)))
 
         for conv, bn, pool in zip(self.convs, self.bns, self.pools):
@@ -221,7 +222,7 @@ class DeepCNN(nn.Module):
             x = pool(x)
 
         x, _ = x.topk(8, dim=2)
-        x = x.view(x.size(0), -1)
+        x = x.reshape(x.size(0), -1)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
