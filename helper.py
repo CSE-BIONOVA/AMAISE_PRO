@@ -69,6 +69,24 @@ def generate_long_sequences(sequence):
     features[seq_list=="N", 3] = 0.25
     return features
 
+
+def generate_onehot_encoding(sequence):
+
+    nuc_d = {'A':[1,0,0,0],
+            'C':[0,1,0,0],
+            'G':[0,0,1,0],
+            'T':[0,0,0,1],
+            'N':[0,0,0,0]}
+    onehot = [nuc_d[nuc] for nuc in sequence]
+    return torch.ByteTensor(onehot)
+    
+
+def encodeLabel(num):
+    encoded_l = np.zeros(6)
+    encoded_l[num] = 1
+    return torch.ByteTensor(encoded_l)
+
+
 '''
 Inputs:
 none
@@ -143,40 +161,72 @@ class TCN(ClassificationBase):
         return output
 
 
-class CombinationalBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1):
-        super(CombinationalBlock, self).__init__()
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=1)
-        self.batch_norm = nn.BatchNorm2d(out_channels)
-        self.relu = nn.ReLU()
+
+# class DenseBlock(nn.Module):
+#     def __init__(self, num_filters_per_size_i, cnn_filter_size_i, num_rep_block_i):
+#         super(DenseBlock, self).__init__()
+#         self.num_filters_per_size_i = num_filters_per_size_i
+#         self.cnn_filter_size_i = cnn_filter_size_i
+#         self.num_rep_block_i = num_rep_block_i
+#         self.conv = nn.Conv2d(in_channels=num_filters_per_size_i, 
+#                               out_channels=num_filters_per_size_i, 
+#                               kernel_size=(1, cnn_filter_size_i))
+#         self.batch_norm = nn.BatchNorm2d(num_filters_per_size_i)
+#         self.nodes = []
+
+#     def forward(self, x):
+#         a = self.batch_norm(self.conv(x))
+#         self.nodes.append(a)
+#         for _ in range(self.num_rep_block_i - 1):
+#             b = self.batch_norm(self.conv(torch.cat(self.nodes, dim=1)))
+#             self.nodes.append(b)
+#         return x
+    
+class DeepCNN(nn.Module):
+    def __init__(self, num_classes,
+                 max_len=10000,
+                 cnn_filter_size=(3, 3, 3, 3),
+                 pooling_filter_size=(2, 2, 2, 2),
+                 num_filters_per_size=(64, 128, 256, 512),
+                 num_rep_block=(4, 4, 4, 4)):
+        super(DeepCNN, self).__init__()
+        self.num_classes = num_classes
+        self.max_len = max_len
+        self.cnn_filter_size = cnn_filter_size
+        self.pooling_filter_size = pooling_filter_size
+        self.num_filters_per_size = num_filters_per_size
+        self.num_rep_block = num_rep_block
+
+        self.conv0 = nn.Conv2d(4, self.num_filters_per_size[0], self.cnn_filter_size[0], padding='same')
+        self.bn0 = nn.BatchNorm2d(self.num_filters_per_size[0])
+
+        self.convs = nn.ModuleList()
+        self.bns = nn.ModuleList()
+        self.pools = nn.ModuleList()
+        for i in range(len(self.num_filters_per_size)-1):
+            self.convs.append(nn.Conv2d(self.num_filters_per_size[i], self.num_filters_per_size[i+1], self.cnn_filter_size[i], padding='same'))
+            self.bns.append(nn.BatchNorm2d(self.num_filters_per_size[i+1]))
+            self.pools.append(nn.MaxPool2d(self.pooling_filter_size[i]))
+
+        self.fc1 = nn.Linear(8 * self.num_filters_per_size[-1], 2048)
+        self.fc2 = nn.Linear(2048, 2048)
+        self.fc3 = nn.Linear(2048, self.num_classes)
 
     def forward(self, x):
-        x = self.conv(x)
-        x = self.batch_norm(x)
-        x = self.relu(x)
-        return x
+        x = x.view(-1, 4, self.max_len, 1)
+        x = F.relu(self.bn0(self.conv0(x)))
 
+        for conv, bn, pool in zip(self.convs, self.bns, self.pools):
+            x = F.relu(bn(conv(x)))
+            x = pool(x)
 
-class CNNModel(nn.Module):
-    def __init__(self, num_classes):
-        super(CNNModel, self).__init__()
-        self.conv1 = CombinationalBlock(3, 64)  # Input channels = 3 (RGB)
-        self.max_pool = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.conv_block2 = CombinationalBlock(64, 2048)
-        self.k_max_pool = nn.AdaptiveMaxPool2d((8, 8))  # K-max pooling with window size 8x8
-        self.conv_block3 = CombinationalBlock(2048, 64)
-        self.dense1 = nn.Linear(2048, num_classes)  # Dense layer with num_classes output neurons
-        self.softmax = nn.Softmax(dim=1)
+        x, _ = x.topk(8, dim=2)
+        x = x.view(x.size(0), -1)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        x = F.softmax(x, dim=1)  # Apply softmax activation
 
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.max_pool(x)
-        x = self.conv_block2(x)
-        x = self.k_max_pool(x)
-        x = self.conv_block3(x)
-        x = x.view(x.size(0), -1)  # Flatten the output of the convolutional layers
-        x = self.dense1(x)
-        x = self.softmax(x)
         return x
 
 
