@@ -138,8 +138,9 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
         y.append(label)
     
     input_tensor_dict = {"X": X, "y": y}
-    torch.save(input_tensor_dict, f"{resultPath}_input_tensor_dict.pt")
+    torch.save(input_tensor_dict, f"/content/drive/MyDrive/FYPDataset/FINAL/human_train/input_tensor_dict.pt")
     print(f"Saved input tensor dict to {resultPath}_input_tensor_dict.pt")
+    exit()
 
     endTime = time.time()
     encoding_time_diff = (endTime - startTime)/60
