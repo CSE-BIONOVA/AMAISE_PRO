@@ -2,3 +2,5 @@ import torch
 print( torch.cuda.is_available())
 
 python .\train_edit.py -i ..\NewDatasetsFYP\human_train.fasta -l ..\NewDatasetsFYP\human_train_labels.csv -m ..\models\human_001.pth -o ..\models\human_1001 -b 32
+
+python .\train_with_tensor.py -i ..\models\human_train_dict.pt -m ..\models\human -o ..\models\human -b 32

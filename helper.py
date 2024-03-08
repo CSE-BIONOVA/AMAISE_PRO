@@ -82,7 +82,7 @@ def generate_onehot_encoding(sequence):
     
 
 def encodeLabel(num):
-    encoded_l = np.zeros(6)
+    encoded_l = [0] * 6
     encoded_l[num-1] = 1
     return torch.ByteTensor(encoded_l)
 

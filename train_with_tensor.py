@@ -111,28 +111,11 @@ def main(input, model, output, batch_size, epoches, learning_rate, max_length):
 
     logger.info("parsing data...")
     input_tensor_dict = torch.load(inputset)
-    print(len(input_tensor_dict['X']))
-    print(len(input_tensor_dict['y']))
     X = input_tensor_dict['X']
     y = input_tensor_dict['y']
-    # startTime = time.time()
-    
-    # for seq in SeqIO.parse(inputset, "fasta"):
-    #     add_len = max_length
-    #     lenOfSeq = len(seq)
-    #     if (lenOfSeq-add_len) > 0:
-    #         encoded = generate_onehot_encoding(seq[:add_len]) 
-    #     else:
-    #         add_len = add_len - lenOfSeq
-    #         encoded = generate_onehot_encoding(seq + "N"*add_len )
-    #     label = encodeLabel(train_label_dict[seq.id])
-    #     X.append(encoded)
-    #     y.append(label)
-    
-    
-    # endTime = time.time()
-    # encoding_time_diff = (endTime - startTime)/60
-    # logger.info(f"Total time taken to parse data: {encoding_time_diff} min")
+
+    print(X[0])
+    print(y[0])
     
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, stratify=y)
 
