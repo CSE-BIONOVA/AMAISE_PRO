@@ -182,7 +182,7 @@ class TCN(ClassificationBase):
 #             self.nodes.append(b)
 #         return x
     
-class DeepCNN(nn.Module):
+class DeepCNN_old(nn.Module):
     def __init__(self, 
                  num_classes = 6,
                  max_len=9000,
@@ -198,7 +198,7 @@ class DeepCNN(nn.Module):
         self.num_filters_per_size = num_filters_per_size
         self.num_rep_block = num_rep_block
 
-        self.conv0 = nn.Conv2d(4, self.num_filters_per_size[0], self.cnn_filter_size[0], padding='same')
+        self.conv0 = nn.Conv2d(4, self.num_filters_per_size[0], [4, self.cnn_filter_size[0]], padding='same')
         self.bn0 = nn.BatchNorm2d(self.num_filters_per_size[0])
 
         self.convs = nn.ModuleList()
@@ -229,8 +229,90 @@ class DeepCNN(nn.Module):
         x = F.softmax(x, dim=1)  # Apply softmax activation
 
         return x
+    
+    def dense_block(self, input_layer, num_filters_per_size_i, cnn_filter_size_i, num_rep_block_i):
+        nodes = []
+        a = nn.conv2d(input_layer, num_filters_per_size_i, [1, cnn_filter_size_i])
+        a = nn.batch_norm(a)
+        nodes.append(a)
+        for z in range(num_rep_block_i-1):
+            b = slim.conv2d(tf.concat(nodes, 3), num_filters_per_size_i, [1, cnn_filter_size_i],
+                            weights_initializer=tf.contrib.layers.variance_scaling_initializer(
+                                factor=1.0, mode='FAN_AVG', uniform=True),
+                            normalizer_fn=slim.batch_norm)
+            nodes.append(b)
+        return b
 
+class DeepCNN(nn.Module):
+    def __init__(self, num_classes, max_len=100,
+                 cnn_filter_size=(3, 3, 3, 3),
+                 pooling_filter_size=(2, 2, 2, 2),
+                 num_filters_per_size=(64, 128, 256, 512),
+                 num_rep_block=(4, 4, 4, 4)):
+        super(DeepCNN, self).__init__()
+        self.num_classes = num_classes
+        self.max_len = max_len
+        self.cnn_filter_size = cnn_filter_size
+        self.pooling_filter_size = pooling_filter_size
+        self.num_filters_per_size = num_filters_per_size
+        self.num_rep_block = num_rep_block
 
+        self.conv0 = nn.Conv2d(1, self.num_filters_per_size[0], kernel_size=(4, self.cnn_filter_size[0]))
+        self.batch_norm0 = nn.BatchNorm2d(self.num_filters_per_size[0])
+
+        self.dense_blocks = nn.ModuleList()
+        self.transition_layers = nn.ModuleList()
+        self.pooling_layers = nn.ModuleList()
+
+        for i in range(len(self.num_filters_per_size)):
+            self.dense_blocks.append(self._make_dense_block(i))
+            if i != len(self.num_filters_per_size) - 1:
+                self.transition_layers.append(self._make_transition_layer(i))
+                self.pooling_layers.append(nn.MaxPool2d(self.pooling_filter_size[i]))
+
+        self.fc1 = nn.Linear(2048, 2048)
+        self.fc2 = nn.Linear(2048, 2048)
+        self.output = nn.Linear(2048, self.num_classes)
+
+    def forward(self, inputs):
+        inputs = inputs.view(-1, 4, self.max_len, 1)
+        inputs = F.relu(self.batch_norm0(self.conv0(inputs)))
+
+        for i in range(len(self.num_filters_per_size)):
+            inputs = self.dense_blocks[i](inputs)
+            if i != len(self.num_filters_per_size) - 1:
+                inputs = self.transition_layers[i](inputs)
+                inputs = self.pooling_layers[i](inputs)
+
+        inputs = F.max_pool2d(inputs, kernel_size=(1, inputs.size(3)))
+        inputs = inputs.view(inputs.size(0), -1)
+        inputs = F.relu(self.fc1(inputs))
+        inputs = F.relu(self.fc2(inputs))
+        logits = self.output(inputs)
+
+        return logits
+
+    def _make_dense_block(self, i):
+        layers = []
+        num_filters_per_size_i = self.num_filters_per_size[i]
+        cnn_filter_size_i = self.cnn_filter_size[i]
+        num_rep_block_i = self.num_rep_block[i]
+
+        layers.append(nn.Conv2d(num_filters_per_size_i, num_filters_per_size_i, kernel_size=(1, cnn_filter_size_i)))
+        layers.append(nn.BatchNorm2d(num_filters_per_size_i))
+
+        for z in range(num_rep_block_i - 1):
+            layers.append(nn.Conv2d(num_filters_per_size_i, num_filters_per_size_i, kernel_size=(1, cnn_filter_size_i)))
+            layers.append(nn.BatchNorm2d(num_filters_per_size_i))
+
+        return nn.Sequential(*layers)
+
+    def _make_transition_layer(self, i):
+        num_filters_per_size_i = self.num_filters_per_size[i]
+        num_filters_per_size_i_plus_1 = self.num_filters_per_size[i + 1]
+        cnn_filter_size_i = self.cnn_filter_size[i]
+
+        return nn.Conv2d(num_filters_per_size_i, num_filters_per_size_i_plus_1, kernel_size=(1, cnn_filter_size_i))
 
 '''
 Inputs:
