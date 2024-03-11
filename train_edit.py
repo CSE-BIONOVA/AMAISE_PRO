@@ -137,13 +137,10 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
         X.append(encoded)
         y.append(label)
     
-    print((X[0].shape))
-    print(len(X))
-    print(len(y))
-    element_lengths = [len(seq) for seq in X]
-    
-
-    #convert to numpy array of tensors
+     
+    tensors_dict = {'X': X, 'y': y}
+    torch.save(tensors_dict, "human_train_tensors.pth")
+  
     endTime = time.time()
     encoding_time_diff = (endTime - startTime)/60
     logger.info(f"Total time taken to parse data: {encoding_time_diff} min")

@@ -107,15 +107,17 @@ def main(input, model, output, batch_size, epoches, learning_rate, max_length):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     logger.info(f"Device: {device}")
-    
-
     logger.info("parsing data...")
+    
+    startTime = time.time()
+    
     input_tensor_dict = torch.load(inputset)
     X = input_tensor_dict['X']
     y = input_tensor_dict['y']
-
-    print(X[0])
-    print(y[0])
+    
+    endTime = time.time()
+    encoding_time_diff = (endTime - startTime)/60
+    logger.info(f"Total time taken to parse data: {encoding_time_diff} min")
     
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, stratify=y)
 
