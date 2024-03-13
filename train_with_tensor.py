@@ -18,13 +18,7 @@ import psutil
 @click.command()
 @click.option(
     "--input", "-i",
-    help = "path to training data",
-    type = click.Path(exists = True),
-    required = True
-)
-@click.option(
-    "--labels", "-l",
-    help = "path to labels of training data",
+    help = "path to training data tensors",
     type = click.Path(exists = True),
     required = True
 )
@@ -74,11 +68,10 @@ import psutil
 )
 @click.help_option('--help', "-h", help = "Show this message and exit")
 
-def main(input, labels, model, output, batch_size, epoches, learning_rate, max_length):
+def main(input, model, output, batch_size, epoches, learning_rate, max_length):
     
     newModelPath = model
     inputset = input
-    labelset = labels
     resultPath = output
     batchSize = batch_size
     epoches = epoches
@@ -101,7 +94,6 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
     
     logger.info(f"Model path: {newModelPath}")
     logger.info(f"Input path: {inputset}")
-    logger.info(f"Labels path: {labelset}")
     logger.info(f"Results path: {resultPath}")
     
     INIT_LR = learningRate
@@ -115,32 +107,14 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     logger.info(f"Device: {device}")
-    
-    train_df = pd.read_csv(labelset)
-    train_label_dict = {train_df['id'][i]: train_df['y_true'][i] for i in range(len(train_df))}
-    
-    X, y = [], []
-    
     logger.info("parsing data...")
     
     startTime = time.time()
     
-    for seq in SeqIO.parse(inputset, "fasta"):
-        add_len = max_length
-        lenOfSeq = len(seq)
-        if (lenOfSeq-add_len) > 0:
-            encoded = generate_onehot_encoding(seq[:add_len]) 
-        else:
-            add_len = add_len - lenOfSeq
-            encoded = generate_onehot_encoding(seq + "N"*add_len )
-        label = encodeLabel(train_label_dict[seq.id])
-        X.append(encoded)
-        y.append(label)
+    input_tensor_dict = torch.load(inputset)
+    X = input_tensor_dict['X']
+    y = input_tensor_dict['y']
     
-     
-    tensors_dict = {'X': X, 'y': y}
-    torch.save(tensors_dict, "human_train_tensors.pth")
-  
     endTime = time.time()
     encoding_time_diff = (endTime - startTime)/60
     logger.info(f"Total time taken to parse data: {encoding_time_diff} min")

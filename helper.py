@@ -69,6 +69,24 @@ def generate_long_sequences(sequence):
     features[seq_list=="N", 3] = 0.25
     return features
 
+
+def generate_onehot_encoding(sequence):
+
+    nuc_d = {'A':[1,0,0,0],
+            'C':[0,1,0,0],
+            'G':[0,0,1,0],
+            'T':[0,0,0,1],
+            'N':[0,0,0,0]}
+    onehot = [nuc_d[nuc] for nuc in sequence]
+    return torch.FloatTensor(onehot)
+    
+
+def encodeLabel(num):
+    encoded_l = [0] * 6
+    encoded_l[num-1] = 1
+    return torch.FloatTensor(encoded_l)
+
+
 '''
 Inputs:
 none
@@ -141,6 +159,129 @@ class TCN(ClassificationBase):
         output = last_layer(output).reshape(output.size(0), output.size(1))*(new_shape/old_shape)
         output = self.fc(output)
         return output
+    
+
+    def __init__(self, 
+                 num_classes = 6,
+                 max_len=9000,
+                 cnn_filter_size=(3, 3, 3, 3),
+                 pooling_filter_size=(2, 2, 2, 2),
+                 num_filters_per_size=(64, 128, 256, 512),
+                 num_rep_block=(4, 4, 4, 4)):
+        super(DeepCNN, self).__init__()
+        self.num_classes = num_classes
+        self.max_len = max_len
+        self.cnn_filter_size = cnn_filter_size
+        self.pooling_filter_size = pooling_filter_size
+        self.num_filters_per_size = num_filters_per_size
+        self.num_rep_block = num_rep_block
+
+        self.conv0 = nn.Conv2d(4, self.num_filters_per_size[0], [4, self.cnn_filter_size[0]], padding='same')
+        self.bn0 = nn.BatchNorm2d(self.num_filters_per_size[0])
+
+        self.convs = nn.ModuleList()
+        self.bns = nn.ModuleList()
+        self.pools = nn.ModuleList()
+        for i in range(len(self.num_filters_per_size)-1):
+            self.convs.append(nn.Conv2d(self.num_filters_per_size[i], self.num_filters_per_size[i+1], self.cnn_filter_size[i], padding='same'))
+            self.bns.append(nn.BatchNorm2d(self.num_filters_per_size[i+1]))
+            self.pools.append(nn.MaxPool2d(self.pooling_filter_size[i]))
+
+        self.fc1 = nn.Linear(8 * self.num_filters_per_size[-1], 2048)
+        self.fc2 = nn.Linear(2048, 2048)
+        self.fc3 = nn.Linear(2048, self.num_classes)
+
+    def forward(self, x):
+        x = x.reshape(-1, 4, self.max_len, 1)
+        x = F.relu(self.bn0(self.conv0(x)))
+
+        for conv, bn, pool in zip(self.convs, self.bns, self.pools):
+            x = F.relu(bn(conv(x)))
+            x = pool(x)
+
+        x, _ = x.topk(8, dim=2)
+        x = x.reshape(x.size(0), -1)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        x = F.softmax(x, dim=1)  # Apply softmax activation
+
+        return x
+
+class DeepCNN(nn.Module):
+    def __init__(self, 
+                 num_classes = 6, 
+                 max_len=9000,
+                 cnn_filter_size=(3, 3, 3, 3),
+                 pooling_filter_size=(2, 2, 2, 2),
+                 num_filters_per_size=(64, 128, 256, 512),
+                 num_rep_block=(4, 4, 4, 4)):
+        super(DeepCNN, self).__init__()
+        self.num_classes = num_classes
+        self.max_len = max_len
+        self.cnn_filter_size = cnn_filter_size
+        self.pooling_filter_size = pooling_filter_size
+        self.num_filters_per_size = num_filters_per_size
+        self.num_rep_block = num_rep_block
+
+        self.conv0 = nn.Conv2d(4, self.num_filters_per_size[0], kernel_size=[4, self.cnn_filter_size[0]], padding='same')
+        self.batch_norm0 = nn.BatchNorm2d(self.num_filters_per_size[0])
+
+        self.dense_blocks = nn.ModuleList()
+        self.transition_layers = nn.ModuleList()
+        self.pooling_layers = nn.ModuleList()
+
+        for i in range(len(self.num_filters_per_size)): 
+            self.dense_blocks.append(self._make_dense_block(i))
+            if i != len(self.num_filters_per_size) - 1:
+                self.transition_layers.append(self._make_transition_layer(i))
+                self.pooling_layers.append(nn.MaxPool2d([1, min(self.pooling_filter_size[i], 1)], stride=min(self.pooling_filter_size[i], 1)))
+
+        
+        self.fc1 = nn.Linear(8 * self.num_filters_per_size[-1], 2048)
+        self.fc2 = nn.Linear(2048, 2048)
+        self.output = nn.Linear(2048, self.num_classes)
+
+    def forward(self, inputs):
+        inputs = inputs.reshape(-1, 4, self.max_len, 1)
+        inputs = F.relu(self.batch_norm0(self.conv0(inputs)))
+
+        for i in range(len(self.num_filters_per_size)): 
+            inputs = self.dense_blocks[i](inputs)
+            if i != len(self.num_filters_per_size) - 1:
+                inputs = self.transition_layers[i](inputs)
+                inputs = self.pooling_layers[i](inputs)
+
+        inputs = inputs.permute(0, 1, 3, 2)
+        inputs, _ = inputs.topk(k=8, dim=-1, largest=True, sorted=False)
+        inputs = inputs.view(inputs.size(0), -1)
+        inputs = F.relu(self.fc1(inputs))
+        inputs = F.relu(self.fc2(inputs))
+        logits = self.output(inputs)
+
+        return logits
+
+    def _make_dense_block(self, i):
+        layers = []
+        num_filters_per_size_i = self.num_filters_per_size[i]
+        cnn_filter_size_i = self.cnn_filter_size[i]
+        num_rep_block_i = self.num_rep_block[i]
+
+        layers.append(nn.Conv2d(num_filters_per_size_i, num_filters_per_size_i, kernel_size=(1, cnn_filter_size_i), padding='same'))
+        layers.append(nn.BatchNorm2d(num_filters_per_size_i))
+
+        for z in range(num_rep_block_i - 1):
+            layers.append(nn.Conv2d(num_filters_per_size_i, num_filters_per_size_i, kernel_size=(1, cnn_filter_size_i), padding='same'))
+            layers.append(nn.BatchNorm2d(num_filters_per_size_i))
+
+        return nn.Sequential(*layers)
+
+    def _make_transition_layer(self, i):
+        num_filters_per_size_i = self.num_filters_per_size[i]
+        num_filters_per_size_i_plus_1 = self.num_filters_per_size[i + 1]
+        cnn_filter_size_i = self.cnn_filter_size[i]
+
+        return nn.Conv2d(num_filters_per_size_i, num_filters_per_size_i_plus_1, kernel_size=(1, cnn_filter_size_i), padding='same')
 
 '''
 Inputs:
