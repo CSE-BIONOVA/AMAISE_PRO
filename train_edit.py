@@ -13,6 +13,7 @@ from torch.utils.data import random_split
 from sklearn.model_selection import train_test_split
 from collections import Counter
 import numpy as np
+import psutil
 
 @click.command()
 @click.option(
@@ -63,8 +64,17 @@ import numpy as np
     show_default = True,
     required = False,
 )
+@click.option(
+    "--max_length", "-ml",
+    help = "maximum length of sequence",
+    type = int,
+    default = 9000,
+    show_default = True,
+    required = False,
+)
 @click.help_option('--help', "-h", help = "Show this message and exit")
-def main(input, labels, model, output, batch_size, epoches, learning_rate):
+
+def main(input, labels, model, output, batch_size, epoches, learning_rate, max_length):
     
     newModelPath = model
     inputset = input
@@ -73,6 +83,7 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate):
     batchSize = batch_size
     epoches = epoches
     learningRate = learning_rate
+    max_length = max_length
     
     logger = logging.getLogger(f"amaisepro")
     logger.setLevel(logging.DEBUG)
@@ -94,97 +105,91 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate):
     logger.info(f"Results path: {resultPath}")
     
     INIT_LR = learningRate
-    logger.info(f"Learning rate: {INIT_LR}")
     BATCH_SIZE = int(batchSize)
-    logger.info(f"Batch size: {BATCH_SIZE}")
     EPOCHES = epoches
+    
+    logger.info(f"Learning rate: {INIT_LR}")
+    logger.info(f"Batch size: {BATCH_SIZE}")
     logger.info(f"# Epoches: {EPOCHES}")
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     logger.info(f"Device: {device}")
     
-    train_df = pd.read_csv(labelset).to_numpy()
+    train_df = pd.read_csv(labelset)
+    train_label_dict = {train_df['id'][i]: train_df['y_true'][i] for i in range(len(train_df))}
     
-    i = 0
-    X = []
-    y = []
+    X, y = [], []
     
     logger.info("parsing data...")
     
     startTime = time.time()
     
     for seq in SeqIO.parse(inputset, "fasta"):
-        add_len = 9000
+        add_len = max_length
         lenOfSeq = len(seq)
         if (lenOfSeq-add_len) > 0:
-            encoded = generate_long_sequences(seq[:add_len]) 
+            encoded = generate_onehot_encoding(seq[:add_len]) 
         else:
             add_len = add_len - lenOfSeq
-            encoded = generate_long_sequences(seq + "0"*add_len )
-        label = encodeLabel(train_df[i][1])
+            encoded = generate_onehot_encoding(seq + "N"*add_len )
+        label = encodeLabel(train_label_dict[seq.id])
         X.append(encoded)
         y.append(label)
-
-        i+=1
     
+     
+    tensors_dict = {'X': X, 'y': y}
+    torch.save(tensors_dict, "human_train_tensors.pth")
+  
     endTime = time.time()
-    logger.info("Total time taken to parse data: {:.2f} min".format({endTime - startTime}/60))
+    encoding_time_diff = (endTime - startTime)/60
+    logger.info(f"Total time taken to parse data: {encoding_time_diff} min")
     
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, stratify=y)
+
     train_data = []
-    
     for i in range(len(X_train)):
         train_data.append((X_train[i], y_train[i]))
     val_data = []
     for i in range(len(X_val)):
         val_data.append((X_val[i], y_val[i]))
         
-    # initialize the train data loader
+   
     trainDataLoader = DataLoader(train_data, shuffle=True, batch_size=BATCH_SIZE)
-    # initialize the validation data loader
     valDataLoader = DataLoader(val_data, shuffle=True, batch_size=BATCH_SIZE)
-    # calculate steps per epoch for training and validation set
+
     trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
     valSteps = len(valDataLoader.dataset) // BATCH_SIZE
-    file = open(resultPath,'a')
-    # initialize the TCN model
-    logger.info("initializing the TCN model...")
-    model = nn.DataParallel(TCN()).to(device)
+    
+    logger.info("initializing the Deep CNN model...")
+    model = nn.DataParallel(DeepCNN(max_len=max_length)).to(device)
 
-    # initialize our optimizer and loss function
     opt = Adam(model.parameters(), lr=INIT_LR)
     lossFn = nn.CrossEntropyLoss()
-    # measure how long training is going to take
+    
     logger.info("training the network...")
+    
     startTime = time.time()
     max_val_acc = 0
-    
-    train_losses = []
-    train_accuracies = []
-    validation_losses = []
-    validation_accuracies = []
+    train_losses, train_accuracies = [], []
+    validation_losses, validation_accuracies = [], []
     epoch_list = [e+1 for e in range(0, EPOCHES)]
     
-    # loop over our epoches
+    
     for e in range(0, EPOCHES):
-        # set the model in training mode
+
         model.train()
     
-        # Initialize total_loss for each epoch
         total_loss = 0.0
         correct_train_predictions = 0
         
-        # loop over the training set
         for step, (x, y) in enumerate(trainDataLoader):
-            # send the input to the device
-            (x, y) = (x.clone().detach().float().to(device), y.to(device))
-            # perform a forward pass and calculate the training loss
-            # pred = torch.softmax(model(x). dim=1)
+            (x, y) = (x.to(device), y.to(device))
             pred = model(x)
             loss = lossFn(pred, y)
-            total_loss += loss.item() # Accumulate the loss for the epoch
-            # zero out the gradients, perform the backpropagation step,
+            total_loss += loss.item() # total loss for each epoch
+            # zero out the gradients, 
+            # perform the backpropagation step,
             # and update the weights
             # calculate correct predictions
             _, predicted_lables = torch.max(pred, 1)
@@ -201,10 +206,9 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate):
         total_val_loss = 0.0
         correct_val_predictions = 0
         
-        # loop over the validation set
         with torch.no_grad():
             for step, (val_x, val_y) in enumerate(valDataLoader):
-                val_x, val_y = val_x.clone().detach().float().to(device), val_y.to(device)
+                val_x, val_y = val_x.to(device), val_y.to(device)
                 
                 # perform a forward pass and calculate the validation loss
                 val_pred = model(val_x)
@@ -215,8 +219,6 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate):
                 _, true_val_labels = torch.max(val_y, 1)
                 correct_val_predictions += (predicted_val_labels == true_val_labels).sum().item()
                 
-        # Calculate and print the validation loss for the epoch
-        # avg_val_loss = total_val_loss / len(valDataLoader)
         train_accuracy = correct_train_predictions / len(trainDataLoader.dataset)
         val_accuracy = correct_val_predictions / len(valDataLoader.dataset)
         total_val_loss = total_val_loss / len(valDataLoader.dataset)
@@ -232,20 +234,20 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate):
         if max_val_acc < val_accuracy:
             max_val_acc = val_accuracy
             torch.save(model.state_dict(), newModelPath)
-    # finish measuring how long training took
-    endTime = time.time()
-    logger.info("total time taken to train the model: {:.2f} min".format((endTime - startTime)/60))
     
-    # serialize the model to disk
-    # modelP = nn.DataParallel(model)
-    # torch.save(modelP.state_dict(), newModelPath)
+    endTime = time.time()
+    peak_memory = psutil.Process().memory_info().peak_wset
+
+    logger.info("total time taken to train the model: {:.2f} min".format((endTime - startTime)/60))
+    logger.info(f"Peak memory usage: {peak_memory}")
+
     
     # Plot training validation losses vs. epoches
     
     plt.plot(epoch_list, train_losses, label="Training loss")
     plt.plot(epoch_list, validation_losses, label="Validation loss")
     plt.xlabel("Epoch")
-    plt.ylabel("Loss")
+    plt.ylabel("Accuracy")
     plt.legend(loc="upper right")
     plt.savefig(f"{resultPath}_losses.png", dpi=300, bbox_inches='tight')
     
@@ -260,11 +262,6 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate):
     plt.legend(loc="lower right")
     plt.savefig(f"{resultPath}_accuracies.png", dpi=300, bbox_inches='tight')
     
-def encodeLabel(num):
-    encoded_l = np.zeros(6)
-    encoded_l[num] = 1
-    return encoded_l
-
 if __name__ == "__main__":
     main()    
         
