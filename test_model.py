@@ -35,7 +35,7 @@ label_df = pd.read_csv(labelset).to_numpy()
 
 def encodeLabel(num):
     encoded_l = np.zeros(6)
-    encoded_l[num-1] = 1
+    encoded_l[num] = 1
     # print(num, encoded_l)
     return encoded_l
 i=0
@@ -72,6 +72,6 @@ test_accuracy = correct_test_predictions / len(testDataLoader.dataset)
 print("Accuracy: ", test_accuracy)
 file.write("Accuracy: {:.2f}\n".format(test_accuracy))
 
-print(classification_report(true, predicted, target_names = ['1','2','3','4','5','6']))
-file.write(classification_report(true, predicted, target_names = ['1','2','3','4','5','6']))
+print(classification_report(true, predicted, target_names = ['0','1','2','3','4','5']))
+file.write(classification_report(true, predicted, target_names = ['0','1','2','3','4','5']))
 file.close()
