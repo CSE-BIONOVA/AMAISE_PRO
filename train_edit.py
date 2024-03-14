@@ -1,4 +1,5 @@
 from helper import *
+from helper_resnet import *
 import argparse
 import pandas as pd
 from torch.utils.data import DataLoader
@@ -161,8 +162,8 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
     trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
     valSteps = len(valDataLoader.dataset) // BATCH_SIZE
     
-    logger.info("initializing the Deep CNN model...")
-    model = nn.DataParallel(DeepCNN(max_len=max_length)).to(device)
+    logger.info("initializing the TCN model...")
+    model = nn.DataParallel(ResNetTCN()).to(device)
 
     opt = Adam(model.parameters(), lr=INIT_LR)
     lossFn = nn.CrossEntropyLoss()

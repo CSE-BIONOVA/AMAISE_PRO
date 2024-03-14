@@ -96,7 +96,7 @@ TCN: AMAISE's architecture, which consists of 4 convolutional layers, a global a
 
 The class TCN contains AMAISE's architecture
 '''
-class TCN(ClassificationBase):
+class TCN(nn.Module):
     def __init__(self):
         num_input_channels = 4
         num_output_channels = 128
@@ -160,54 +160,6 @@ class TCN(ClassificationBase):
         output = self.fc(output)
         return output
     
-
-    def __init__(self, 
-                 num_classes = 6,
-                 max_len=9000,
-                 cnn_filter_size=(3, 3, 3, 3),
-                 pooling_filter_size=(2, 2, 2, 2),
-                 num_filters_per_size=(64, 128, 256, 512),
-                 num_rep_block=(4, 4, 4, 4)):
-        super(DeepCNN, self).__init__()
-        self.num_classes = num_classes
-        self.max_len = max_len
-        self.cnn_filter_size = cnn_filter_size
-        self.pooling_filter_size = pooling_filter_size
-        self.num_filters_per_size = num_filters_per_size
-        self.num_rep_block = num_rep_block
-
-        self.conv0 = nn.Conv2d(4, self.num_filters_per_size[0], [4, self.cnn_filter_size[0]], padding='same')
-        self.bn0 = nn.BatchNorm2d(self.num_filters_per_size[0])
-
-        self.convs = nn.ModuleList()
-        self.bns = nn.ModuleList()
-        self.pools = nn.ModuleList()
-        for i in range(len(self.num_filters_per_size)-1):
-            self.convs.append(nn.Conv2d(self.num_filters_per_size[i], self.num_filters_per_size[i+1], self.cnn_filter_size[i], padding='same'))
-            self.bns.append(nn.BatchNorm2d(self.num_filters_per_size[i+1]))
-            self.pools.append(nn.MaxPool2d(self.pooling_filter_size[i]))
-
-        self.fc1 = nn.Linear(8 * self.num_filters_per_size[-1], 2048)
-        self.fc2 = nn.Linear(2048, 2048)
-        self.fc3 = nn.Linear(2048, self.num_classes)
-
-    def forward(self, x):
-        x = x.reshape(-1, 4, self.max_len, 1)
-        x = F.relu(self.bn0(self.conv0(x)))
-
-        for conv, bn, pool in zip(self.convs, self.bns, self.pools):
-            x = F.relu(bn(conv(x)))
-            x = pool(x)
-
-        x, _ = x.topk(8, dim=2)
-        x = x.reshape(x.size(0), -1)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        x = F.softmax(x, dim=1)  # Apply softmax activation
-
-        return x
-
 class DeepCNN(nn.Module):
     def __init__(self, 
                  num_classes = 6, 
