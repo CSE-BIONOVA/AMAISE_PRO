@@ -141,8 +141,8 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
         y.append(label)
     
      
-    tensors_dict = {'X': X, 'y': y}
-    torch.save(tensors_dict, "human_train_tensors.pth")
+    # tensors_dict = {'X': X, 'y': y}
+    # torch.save(tensors_dict, "human_train_tensors.pth")
   
     endTime = time.time()
     encoding_time_diff = (endTime - startTime)/60
@@ -167,7 +167,7 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
     logger.info("initializing the TCN model...")
     model = nn.DataParallel(ResNetTCN()).to(device)
 
-    opt = Adam(model.parameters(), lr=INIT_LR)
+    opt = Adam(model.parameters(), lr=INIT_LR, weight_decay=1e-5)
     lossFn = nn.CrossEntropyLoss()
     
     logger.info("training the network...")
@@ -200,6 +200,8 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
             correct_train_predictions += (predicted_lables ==true_labels).sum().item()
             opt.zero_grad()
             loss.backward()
+            # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+
             opt.step()
             # opt.zero_grad()
             
