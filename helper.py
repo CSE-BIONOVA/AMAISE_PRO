@@ -8,6 +8,7 @@ torch.backends.cudnn.enabled=False
 from constants import *
 import joblib
 from classify import *
+from pcmer import features
 
 # ensure reproducibility
 seed = 0
@@ -80,7 +81,10 @@ def generate_onehot_encoding(sequence):
     onehot = [nuc_d[nuc] for nuc in sequence]
     return torch.FloatTensor(onehot)
     
-
+def pc_mer_encoding(sequence):
+    Seq = features.Change_DNA('id\n' + sequence)
+    return features.PC_mer(Seq, 2)
+    
 def encodeLabel(num):
     encoded_l = [0] * 6
     encoded_l[num-1] = 1
