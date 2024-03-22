@@ -4,8 +4,9 @@ import torch.nn as nn
 from constants import *
 
 class ResidualBlock(nn.Module):
-  def __init__(self, in_channels, out_channels):
+  def __init__(self, in_channels, out_channels, filter_size):
     super().__init__()
+    self.filter_size = filter_size
     self.conv1 = nn.Conv1d(in_channels, out_channels, kernel_size=self.filter_size, padding=(self.filter_size - 1)//2, padding_mode='zeros')
     self.bn1 = nn.BatchNorm1d(out_channels)
     self.relu = nn.ReLU(inplace=True)
@@ -20,7 +21,7 @@ class ResidualBlock(nn.Module):
   def forward(self, x):
     out = self.relu(self.bn1(self.conv1(x)))
     out = self.bn2(self.conv2(out))
-    out += self.shortcut(x)  # Add residual connection
+    # out += self.shortcut(x)  # Add residual connection
     out = self.relu(out)
     return out
 
@@ -34,8 +35,8 @@ class ResNetTCN(nn.Module):
         num_classes = 6
 
         # Replace convolutional layers with residual blocks
-        self.block1 = ResidualBlock(num_input_channels, num_output_channels)
-        self.block2 = ResidualBlock(num_output_channels, num_output_channels)
+        self.block1 = ResidualBlock(num_input_channels, num_output_channels, filter_size)
+        self.block2 = ResidualBlock(num_output_channels, num_output_channels, filter_size)
         
         self.fc = nn.Linear(num_output_channels, num_classes)
         self.pool = nn.AvgPool1d(pool_amt)
