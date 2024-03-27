@@ -82,8 +82,10 @@ def generate_onehot_encoding(sequence):
     return torch.FloatTensor(onehot)
     
 def pc_mer_encoding(sequence):
-    Seq = features.Change_DNA('id\n' + sequence)
-    return features.PC_mer(Seq, 2)
+    # print('id\n' + str(sequence.seq))
+    Seq = features.Change_DNA('id\n' + str(sequence.seq))
+    encoded = features.PC_mer(Seq, 2)
+    return np.reshape(encoded.astype(np.float32), (-1, 1))
     
 def encodeLabel(num):
     encoded_l = [0] * 6
@@ -129,36 +131,41 @@ class TCN(nn.Module):
             x = self.pad(x)
         new_shape = x.shape[2]
         
+        # x1 = x
         output = self.c_in1(x)
         output = torch.relu(output)
+        # output = output + x1
         output = self.pool(output)*(new_shape/old_shape)
         
         old_shape = output.shape[2]
         if output.shape[2] < self.pool_amt:
             output = self.pad(output)
         new_shape = output.shape[2]
-                
+        # x2 = self.pool(output)*(new_shape/old_shape)     
         output = self.c_in2(output)
         output = torch.relu(output)
+        # output = output + x2
         output = self.pool(output)*(new_shape/old_shape)
         
         old_shape = output.shape[2]
         if output.shape[2] < self.pool_amt:
             output = self.pad(output)
         new_shape = output.shape[2]
-                
+        # x3 = output    
         output = self.c_in3(output)
         output = torch.relu(output)
+        # output = output + x2
         output = self.pool(output)*(new_shape/old_shape)
         
         old_shape = output.shape[2]
         if output.shape[2] < self.pool_amt:
             output = self.pad(output)
         new_shape = output.shape[2]
-                
+        # x4 = output        
         output = self.c_in4(output)
         output = torch.relu(output)
         
+        # output = output + x4
         last_layer = nn.AvgPool1d(output.size(2))
         output = last_layer(output).reshape(output.size(0), output.size(1))*(new_shape/old_shape)
         output = self.fc(output)

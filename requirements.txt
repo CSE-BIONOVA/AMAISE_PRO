@@ -9,3 +9,4 @@ argparse>=1.4.0
 pandas
 click
 psutil
+physicochemical-mers==1.0.0

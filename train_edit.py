@@ -129,13 +129,15 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
     for seq in SeqIO.parse(inputset, "fasta"):
         add_len = max_length
         lenOfSeq = len(seq)
-        if (lenOfSeq-add_len) > 0:
-            encoded = generate_onehot_encoding(seq[:add_len])
+        if (lenOfSeq-add_len) >= 0:
             # encoded = pc_mer_encoding(seq[:add_len])
+            # label = encodeLabel(train_label_dict[seq.id])
+            # X.append(encoded)
+            # y.append(label)
+            encoded = generate_onehot_encoding(seq[:add_len])
         else:
             add_len = add_len - lenOfSeq
             encoded = generate_onehot_encoding(seq + "N"*add_len )
-            # encoded = pc_mer_encoding()
         label = encodeLabel(train_label_dict[seq.id])
         X.append(encoded)
         y.append(label)
@@ -165,7 +167,7 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
     valSteps = len(valDataLoader.dataset) // BATCH_SIZE
     
     logger.info("initializing the TCN model...")
-    model = nn.DataParallel(ResNetTCN()).to(device)
+    model = nn.DataParallel(TCN()).to(device)
 
     opt = Adam(model.parameters(), lr=INIT_LR, weight_decay=1e-5)
     lossFn = nn.CrossEntropyLoss()
@@ -252,7 +254,7 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
     plt.plot(epoch_list, train_losses, label="Training loss")
     plt.plot(epoch_list, validation_losses, label="Validation loss")
     plt.xlabel("Epoch")
-    plt.ylabel("Accuracy")
+    plt.ylabel("Loss")
     plt.legend(loc="upper right")
     plt.savefig(f"{resultPath}_losses.png", dpi=300, bbox_inches='tight')
     
@@ -263,7 +265,7 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
     plt.plot(epoch_list, train_accuracies, label="Training accuracy")
     plt.plot(epoch_list, validation_accuracies, label="Validation accuracy")
     plt.xlabel("Epoch")
-    plt.ylabel("Loss")
+    plt.ylabel("Accuracy")
     plt.legend(loc="lower right")
     plt.savefig(f"{resultPath}_accuracies.png", dpi=300, bbox_inches='tight')
     
