@@ -8,6 +8,7 @@ torch.backends.cudnn.enabled=False
 from constants import *
 import joblib
 from classify import *
+from pcmer import features
 
 # ensure reproducibility
 seed = 0
@@ -69,6 +70,29 @@ def generate_long_sequences(sequence):
     features[seq_list=="N", 3] = 0.25
     return features
 
+
+def generate_onehot_encoding(sequence):
+
+    nuc_d = {'A':[1,0,0,0],
+            'C':[0,1,0,0],
+            'G':[0,0,1,0],
+            'T':[0,0,0,1],
+            'N':[0,0,0,0]}
+    onehot = [nuc_d[nuc] for nuc in sequence]
+    return torch.FloatTensor(onehot)
+    
+def pc_mer_encoding(sequence):
+    # print('id\n' + str(sequence.seq))
+    Seq = features.Change_DNA('id\n' + str(sequence.seq))
+    encoded = features.PC_mer(Seq, 2)
+    return np.reshape(encoded.astype(np.float32), (-1, 1))
+    
+def encodeLabel(num):
+    encoded_l = [0] * 6
+    encoded_l[num-1] = 1
+    return torch.FloatTensor(encoded_l)
+
+
 '''
 Inputs:
 none
@@ -78,12 +102,12 @@ TCN: AMAISE's architecture, which consists of 4 convolutional layers, a global a
 
 The class TCN contains AMAISE's architecture
 '''
-class TCN(ClassificationBase):
+class TCN(nn.Module):
     def __init__(self):
         num_input_channels = 4
         num_output_channels = 128
         filter_size = 15
-        num_classes = 2
+        num_classes = 6
         pool_amt = 5
         
         super().__init__()
@@ -107,40 +131,120 @@ class TCN(ClassificationBase):
             x = self.pad(x)
         new_shape = x.shape[2]
         
+        # x1 = x
         output = self.c_in1(x)
         output = torch.relu(output)
+        # output = output + x1
         output = self.pool(output)*(new_shape/old_shape)
         
         old_shape = output.shape[2]
         if output.shape[2] < self.pool_amt:
             output = self.pad(output)
         new_shape = output.shape[2]
-                
+        # x2 = self.pool(output)*(new_shape/old_shape)     
         output = self.c_in2(output)
         output = torch.relu(output)
+        # output = output + x2
         output = self.pool(output)*(new_shape/old_shape)
         
         old_shape = output.shape[2]
         if output.shape[2] < self.pool_amt:
             output = self.pad(output)
         new_shape = output.shape[2]
-                
+        # x3 = output    
         output = self.c_in3(output)
         output = torch.relu(output)
+        # output = output + x2
         output = self.pool(output)*(new_shape/old_shape)
         
         old_shape = output.shape[2]
         if output.shape[2] < self.pool_amt:
             output = self.pad(output)
         new_shape = output.shape[2]
-                
+        # x4 = output        
         output = self.c_in4(output)
         output = torch.relu(output)
         
+        # output = output + x4
         last_layer = nn.AvgPool1d(output.size(2))
         output = last_layer(output).reshape(output.size(0), output.size(1))*(new_shape/old_shape)
         output = self.fc(output)
         return output
+    
+class DeepCNN(nn.Module):
+    def __init__(self, 
+                 num_classes = 6, 
+                 max_len=9000,
+                 cnn_filter_size=(3, 3, 3, 3),
+                 pooling_filter_size=(2, 2, 2, 2),
+                 num_filters_per_size=(64, 128, 256, 512),
+                 num_rep_block=(4, 4, 4, 4)):
+        super(DeepCNN, self).__init__()
+        self.num_classes = num_classes
+        self.max_len = max_len
+        self.cnn_filter_size = cnn_filter_size
+        self.pooling_filter_size = pooling_filter_size
+        self.num_filters_per_size = num_filters_per_size
+        self.num_rep_block = num_rep_block
+
+        self.conv0 = nn.Conv2d(4, self.num_filters_per_size[0], kernel_size=[4, self.cnn_filter_size[0]], padding='same')
+        self.batch_norm0 = nn.BatchNorm2d(self.num_filters_per_size[0])
+
+        self.dense_blocks = nn.ModuleList()
+        self.transition_layers = nn.ModuleList()
+        self.pooling_layers = nn.ModuleList()
+
+        for i in range(len(self.num_filters_per_size)): 
+            self.dense_blocks.append(self._make_dense_block(i))
+            if i != len(self.num_filters_per_size) - 1:
+                self.transition_layers.append(self._make_transition_layer(i))
+                self.pooling_layers.append(nn.MaxPool2d([1, min(self.pooling_filter_size[i], 1)], stride=min(self.pooling_filter_size[i], 1)))
+
+        
+        self.fc1 = nn.Linear(8 * self.num_filters_per_size[-1], 2048)
+        self.fc2 = nn.Linear(2048, 2048)
+        self.output = nn.Linear(2048, self.num_classes)
+
+    def forward(self, inputs):
+        inputs = inputs.reshape(-1, 4, self.max_len, 1)
+        inputs = F.relu(self.batch_norm0(self.conv0(inputs)))
+
+        for i in range(len(self.num_filters_per_size)): 
+            inputs = self.dense_blocks[i](inputs)
+            if i != len(self.num_filters_per_size) - 1:
+                inputs = self.transition_layers[i](inputs)
+                inputs = self.pooling_layers[i](inputs)
+
+        inputs = inputs.permute(0, 1, 3, 2)
+        inputs, _ = inputs.topk(k=8, dim=-1, largest=True, sorted=False)
+        inputs = inputs.view(inputs.size(0), -1)
+        inputs = F.relu(self.fc1(inputs))
+        inputs = F.relu(self.fc2(inputs))
+        logits = self.output(inputs)
+
+        return logits
+
+    def _make_dense_block(self, i):
+        layers = []
+        num_filters_per_size_i = self.num_filters_per_size[i]
+        cnn_filter_size_i = self.cnn_filter_size[i]
+        num_rep_block_i = self.num_rep_block[i]
+
+        layers.append(nn.Conv2d(num_filters_per_size_i, num_filters_per_size_i, kernel_size=(1, cnn_filter_size_i), padding='same'))
+        layers.append(nn.BatchNorm2d(num_filters_per_size_i))
+
+        for z in range(num_rep_block_i - 1):
+            layers.append(nn.Conv2d(num_filters_per_size_i, num_filters_per_size_i, kernel_size=(1, cnn_filter_size_i), padding='same'))
+            layers.append(nn.BatchNorm2d(num_filters_per_size_i))
+
+        return nn.Sequential(*layers)
+
+    def _make_transition_layer(self, i):
+        num_filters_per_size_i = self.num_filters_per_size[i]
+        num_filters_per_size_i_plus_1 = self.num_filters_per_size[i + 1]
+        cnn_filter_size_i = self.cnn_filter_size[i]
+
+        return nn.Conv2d(num_filters_per_size_i, num_filters_per_size_i_plus_1, kernel_size=(1, cnn_filter_size_i), padding='same')
 
 '''
 Inputs:
@@ -272,9 +376,11 @@ write_output_paired writes the classification label of the single-end read in va
 '''
 def write_output(typefile, outputwritefile, g, id_, seq_, len_, pred_, qual_):
     final_len = closest(list(threshs.keys()), len_)
-    label = 1
-    if pred_ < threshs[final_len]:
-        label = 0
+    # label = 1
+    # if pred_ < threshs[final_len]:
+    #     label = 0
+    label = pred_+1
+    # print("pred_",pred_)
     outputwritefile.write('%s, %d, %d\n'%(id_, label, len_))
     if pred_ < threshs[final_len]:
         if typefile == 'fastq':
