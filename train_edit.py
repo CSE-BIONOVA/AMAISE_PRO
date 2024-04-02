@@ -134,10 +134,12 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
             # label = encodeLabel(train_label_dict[seq.id])
             # X.append(encoded)
             # y.append(label)
-            encoded = generate_onehot_encoding(seq[:add_len])
+            # encoded = generate_onehot_encoding(seq[:add_len])
+            encoded = generate_encodings(seq[:add_len])
         else:
-            add_len = add_len - lenOfSeq
-            encoded = generate_onehot_encoding(seq + "N"*add_len )
+            # add_len = add_len - lenOfSeq
+            # encoded = generate_onehot_encoding(seq + "N"*add_len )
+            encoded = generate_encodings(seq + "N"*(add_len-lenOfSeq))
         label = encodeLabel(train_label_dict[seq.id])
         X.append(encoded)
         y.append(label)

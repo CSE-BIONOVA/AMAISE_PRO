@@ -1,6 +1,9 @@
 import numpy as np
 import torch
 import random
+import xxhash
+import sourmash
+import pickle
 import torch.nn as nn
 from Bio import SeqIO
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
@@ -23,6 +26,17 @@ torch.backends.cudnn.benchmark = False
 
 # the thresholds used to convert AMAISE's output probabilities into classification labels
 threshs = {25: 0.31313131313131315, 50: 0.4141414141414142, 100: 0.5454545454545455, 150: 0.6262626262626263, 200: 0.7070707070707072, 250: 0.6363636363636365, 300: 0.6666666666666667, 500: 0.6464646464646465, 1000: 0.4747474747474748, 5000: 0.48484848484848486, 10000: 0.4646464646464647}
+
+translation_dict = {"A": "T", "T": "A", "C": "G", "G": "C", "N": "N",
+                    "K": "N", "M": "N", "R": "N", "Y": "N", "S": "N",
+                    "W": "N", "B": "N", "V": "N", "H": "N", "D": "N",
+                    "X": "N"}
+
+one_hot_encoding = {"<pad>": 0, "<unk>": 1, "<cls>": 2, "<sep>": 3, "A": 4, "C": 5, "G": 6, "T": 7}
+one_hot_encoding_len = len(one_hot_encoding)
+
+SPECIAL_TOKENS = ['<pad>', '<unk>', '<cls>']
+SPECIAL_TOKENS_2_INDEX = {'<pad>': 0, '<unk>': 1, '<cls>': 2}
 
 '''
 Inputs:
@@ -70,6 +84,20 @@ def generate_long_sequences(sequence):
     features[seq_list=="N", 3] = 0.25
     return features
 
+def generate_encodings(sequence):
+    kmer_sz = 12 # cfg.mdl_common.kmer_size
+    num_buckets = 2 ** 22 # cfg.hashing.num_buckets
+    lsh_l = (kmer_sz // 2) + 1
+    # vocab = 
+
+    # features = oldOneHotEncoding(sequence)
+    # features = Read2VocabKmer(vocab, kmer_sz)
+    # features = ReadToBpeEncoding(bpe_model)
+    # features = Read2HashKmer(num_buckets, kmer_sz)
+    # features = Read2LshKmer(num_buckets, kmer_sz, lsh_l)
+    features = ReadToOneHotEncoding(sequence)
+    # features = generate_onehot_encoding(sequence)
+    return features
 
 def generate_onehot_encoding(sequence):
 
@@ -92,6 +120,133 @@ def encodeLabel(num):
     encoded_l[num-1] = 1
     return torch.FloatTensor(encoded_l)
 
+class ReadToOneHotEncoding(object):
+
+    def __init__(self) -> None:
+        super().__init__()
+    
+    def __call__(self, x):
+        x_len = len(x)
+        x_rc = forward2reverse(x)
+        canonical = x if x < x_rc else x_rc
+        result_indices = np.zeros((x_len,), dtype=np.int32)
+        for index, base in enumerate(canonical):
+            if not base in ["A", "C", "G", "T"]:
+                result_indices[index] = one_hot_encoding["<unk>"]
+            else:
+                result_indices[index] = one_hot_encoding[base]
+        return result_indices
+
+
+class ReadToBpeEncoding(object):
+
+    def __init__(self, bpe_model, canonical=True) -> None:
+        super().__init__()
+        self.bpe_model = bpe_model
+        self.canonical = canonical
+
+    def __call__(self, x):
+        x = make_canonical(x) if self.canonical else x
+        return self.bpe_model.encode(x).ids
+
+
+class Read2VocabKmer(object):
+
+    def __init__(self, vocabulary, k) -> None:
+        super().__init__()
+        # self.logger = getLogger(self.__class__.__name__)
+        self.vocabulary = vocabulary
+        self.k = k
+        self.kmer2index_fn = lambda kmer: kmer_to_index_vocab(self.vocabulary, kmer)
+
+    def __call__(self, x):
+        # return seq_to_kmer_vocab(x, self.k, self.vocabulary)
+        return seq_to_kmer(x, self.k, self.kmer2index_fn)
+
+
+class Read2HashKmer(object):
+
+    def __init__(self, num_buckets, k) -> None:
+        super().__init__()
+        self.logger = getLogger(self.__class__.__name__)
+        self.num_buckets = num_buckets
+        self.k = k
+        # keep special tokens (<pad>, <unk>, <cls> intact by shifting all other hashes)
+        self.hash_add = len(SPECIAL_TOKENS)
+        self.kmer2index_fn = lambda kmer: kmer2index_h(self.num_buckets, kmer, SPECIAL_TOKENS_2_INDEX) + self.hash_add
+
+    def __call__(self, x):
+        return seq_to_kmer(x, self.k, self.kmer2index_fn)
+
+class Read2LshKmer(object):
+
+    def __init__(self, num_buckets, k, l, num_min_hashes=None, seed_max_val=1000000) -> None:
+        super().__init__()
+        self.logger = getLogger(self.__class__.__name__)
+        self.num_buckets = num_buckets
+        self.k = k
+        self.l = l
+        self.hash_add = len(SPECIAL_TOKENS)
+        self.num_min_hashes = (self.k - self.l + 1) if num_min_hashes is None else num_min_hashes
+        # user specified number of min-hashes should at least cover the amounts lmers used
+        # in our case: number of min-hashes is exactly equal to the number of extracted lmers since we do LSH
+        assert self.num_min_hashes >= (self.k - self.l + 1)
+        self.seeds = np.random.randint(0, seed_max_val, self.num_min_hashes, dtype=np.uint32)
+        self.unk_idx = SPECIAL_TOKENS_2_INDEX["<unk>"]
+
+    def __call__(self, x):
+        # we need a bytes representation since the underlying cython implementation operates on char* dtype
+        # standard encoding is "utf-8" for all versions of python3
+        x = x.encode()
+        return seq_to_kmer_lsh(x, self.k, self.l, self.num_buckets, self.seeds, self.unk_idx, self.hash_add)
+
+def forward2reverse(seq):
+    letters = list(seq)
+    letters = [translation_dict[base] for base in letters]
+    return ''.join(letters)[::-1]
+
+def make_canonical(seq):
+    seq_r = forward2reverse(seq)
+    return seq if seq < seq_r else seq_r
+
+def kmer_to_index_vocab(vocabulary, kmer_f):
+    if kmer_f in vocabulary:
+        return vocabulary[kmer_f]
+    elif (kmer_r := forward2reverse(kmer_f)) in vocabulary:
+        return vocabulary[kmer_r]
+    else:
+        return vocabulary["<unk>"]
+    
+def kmer2index_lsh(l, mask, half_min_hash_len, k_mer, special_tokens_mapping):
+    if "N" in k_mer:
+        return special_tokens_mapping['<unk>']
+    canonical_kmer = make_canonical(k_mer)
+    hash = xxhash.xxh32()
+    minhash = sourmash.MinHash(n=len(canonical_kmer), ksize=l)
+    minhash.add_sequence(canonical_kmer, True)
+    # hashes should be already sorted
+    min_hashes = minhash.get_hashes()
+    sketch = min_hashes[:half_min_hash_len]
+    hash.update(pickle.dumps(tuple(sketch)))
+    return hash.intdigest() & mask
+
+
+def kmer2index_h(num_buckets, k_mer, special_tokens_mapping):
+    if "N" in k_mer:
+        return special_tokens_mapping['<unk>']
+    canonical_kmer = make_canonical(k_mer)
+    mask = num_buckets - 1
+    return xxhash.xxh32(canonical_kmer).intdigest() & mask
+
+
+def seq_to_kmer(seq, k, kmer2index_fn):
+    num_kmers = len(seq) - k + 1
+    index_seq = np.zeros(shape=(num_kmers), dtype=np.int32)
+    for index in range(0, num_kmers):
+        kmer_f = seq[index:index + k]
+        idx = kmer2index_fn(kmer_f)
+        index_seq[index] = idx
+    return index_seq
 
 '''
 Inputs:
