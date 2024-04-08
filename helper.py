@@ -104,7 +104,7 @@ The class TCN contains AMAISE's architecture
 '''
 class TCN(nn.Module):
     def __init__(self):
-        num_input_channels = 4
+        num_input_channels = 1
         num_output_channels = 128
         filter_size = 15
         num_classes = 6

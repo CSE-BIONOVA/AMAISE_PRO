@@ -118,7 +118,8 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
     logger.info(f"Device: {device}")
     
     train_df = pd.read_csv(labelset)
-    train_label_dict = {train_df['id'][i]: train_df['y_true'][i] for i in range(len(train_df))}
+    # train_label_dict = {train_df['id'][i]: train_df['y_true'][i] for i in range(len(train_df))}
+    train_data_arr = pd.read_csv(inputset, header=None).to_numpy()
     
     X, y = [], []
     
@@ -126,22 +127,29 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
     
     startTime = time.time()
     
-    for seq in SeqIO.parse(inputset, "fasta"):
-        add_len = max_length
-        lenOfSeq = len(seq)
-        if (lenOfSeq-add_len) >= 0:
-            # encoded = pc_mer_encoding(seq[:add_len])
-            # label = encodeLabel(train_label_dict[seq.id])
-            # X.append(encoded)
-            # y.append(label)
-            encoded = generate_onehot_encoding(seq[:add_len])
-        else:
-            add_len = add_len - lenOfSeq
-            encoded = generate_onehot_encoding(seq + "N"*add_len )
-        label = encodeLabel(train_label_dict[seq.id])
-        X.append(encoded)
+    # for seq in SeqIO.parse(inputset, "fasta"):
+    #     add_len = max_length
+    #     lenOfSeq = len(seq)
+    #     if (lenOfSeq-add_len) >= 0:
+    #         # encoded = pc_mer_encoding(seq[:add_len])
+    #         # label = encodeLabel(train_label_dict[seq.id])
+    #         # X.append(encoded)
+    #         # y.append(label)
+    #         encoded = generate_onehot_encoding(seq[:add_len])
+    #     else:
+    #         add_len = add_len - lenOfSeq
+    #         encoded = generate_onehot_encoding(seq + "N"*add_len )
+    #     label = encodeLabel(train_label_dict[seq.id])
+    #     X.append(encoded)
+    #     y.append(label)
+    i = 0
+    for row in train_data_arr:
+        X.append(np.reshape(row.astype(np.float32), (-1, 1)))
+        # print(row)
+        label = encodeLabel(train_df['y_true'][i])
+        # print(label)
         y.append(label)
-    
+        i = i + 1
      
     # tensors_dict = {'X': X, 'y': y}
     # torch.save(tensors_dict, "human_train_tensors.pth")
