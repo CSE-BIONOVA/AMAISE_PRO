@@ -211,14 +211,14 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate):
             torch.save(model.state_dict(), newModelPath)
 
     endTime = time.time()
-    peak_memory = psutil.Process().memory_info()
+    memory = psutil.Process().memory_info()
 
     logger.info(
         "total time taken to train the model: {:.2f} min".format(
             (endTime - startTime) / 60
         )
     )
-    logger.info(f"Peak memory usage: {peak_memory}")
+    logger.info(f"Memory usage: {memory}")
 
     # Plot training validation losses vs. epoches
 
