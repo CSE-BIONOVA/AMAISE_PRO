@@ -1,16 +1,12 @@
 from helper import *
-from helper_resnet import *
 import argparse
 import pandas as pd
 from torch.utils.data import DataLoader
 from torch.optim import Adam
 import time
-import sys, getopt
 import logging
 import click
 import matplotlib.pyplot as plt
-from Bio.SeqIO.QualityIO import FastqGeneralIterator
-from torch.utils.data import random_split
 from sklearn.model_selection import train_test_split
 from collections import Counter
 import numpy as np
@@ -65,17 +61,9 @@ import psutil
     show_default = True,
     required = False,
 )
-@click.option(
-    "--max_length", "-ml",
-    help = "maximum length of sequence",
-    type = int,
-    default = 9000,
-    show_default = True,
-    required = False,
-)
 @click.help_option('--help', "-h", help = "Show this message and exit")
 
-def main(input, labels, model, output, batch_size, epoches, learning_rate, max_length):
+def main(input, labels, model, output, batch_size, epoches, learning_rate):
     
     newModelPath = model
     inputset = input
@@ -84,7 +72,6 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
     batchSize = batch_size
     epoches = epoches
     learningRate = learning_rate
-    max_length = max_length
     
     logger = logging.getLogger(f"amaisepro")
     logger.setLevel(logging.DEBUG)
@@ -118,7 +105,6 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
     logger.info(f"Device: {device}")
     
     train_df = pd.read_csv(labelset)
-    # train_label_dict = {train_df['id'][i]: train_df['y_true'][i] for i in range(len(train_df))}
     train_data_arr = pd.read_csv(inputset, header=None).to_numpy()
     
     X, y = [], []
@@ -127,33 +113,13 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
     
     startTime = time.time()
     
-    # for seq in SeqIO.parse(inputset, "fasta"):
-    #     add_len = max_length
-    #     lenOfSeq = len(seq)
-    #     if (lenOfSeq-add_len) >= 0:
-    #         # encoded = pc_mer_encoding(seq[:add_len])
-    #         # label = encodeLabel(train_label_dict[seq.id])
-    #         # X.append(encoded)
-    #         # y.append(label)
-    #         encoded = generate_onehot_encoding(seq[:add_len])
-    #     else:
-    #         add_len = add_len - lenOfSeq
-    #         encoded = generate_onehot_encoding(seq + "N"*add_len )
-    #     label = encodeLabel(train_label_dict[seq.id])
-    #     X.append(encoded)
-    #     y.append(label)
     i = 0
     for row in train_data_arr:
         X.append(np.reshape(row.astype(np.float32), (-1, 1)))
-        # print(row)
         label = encodeLabel(train_df['y_true'][i])
-        # print(label)
         y.append(label)
         i = i + 1
-     
-    # tensors_dict = {'X': X, 'y': y}
-    # torch.save(tensors_dict, "human_train_tensors.pth")
-  
+       
     endTime = time.time()
     encoding_time_diff = (endTime - startTime)/60
     logger.info(f"Total time taken to parse data: {encoding_time_diff} min")
@@ -170,9 +136,6 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
    
     trainDataLoader = DataLoader(train_data, shuffle=True, batch_size=BATCH_SIZE)
     valDataLoader = DataLoader(val_data, shuffle=True, batch_size=BATCH_SIZE)
-
-    trainSteps = len(trainDataLoader.dataset) // BATCH_SIZE
-    valSteps = len(valDataLoader.dataset) // BATCH_SIZE
     
     logger.info("initializing the TCN model...")
     model = nn.DataParallel(TCN()).to(device)
@@ -202,18 +165,18 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
             loss = lossFn(pred, y)
             total_loss += loss.item() # total loss for each epoch
             # zero out the gradients, 
-            # perform the backpropagation step,
             # and update the weights
-            # calculate correct predictions
             _, predicted_lables = torch.max(pred, 1)
             _, true_labels = torch.max(y, 1)
+            # calculate correct predictions
             correct_train_predictions += (predicted_lables ==true_labels).sum().item()
+            # zero out the gradients
             opt.zero_grad()
+            # perform the backpropagation step
             loss.backward()
             # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
             opt.step()
-            # opt.zero_grad()
             
         model.eval()
         
@@ -251,10 +214,10 @@ def main(input, labels, model, output, batch_size, epoches, learning_rate, max_l
             torch.save(model.state_dict(), newModelPath)
     
     endTime = time.time()
-    # peak_memory = psutil.Process().memory_info().peak_memory
+    peak_memory = psutil.Process().memory_info()
 
     logger.info("total time taken to train the model: {:.2f} min".format((endTime - startTime)/60))
-    # logger.info(f"Peak memory usage: {peak_memory}")
+    logger.info(f"Peak memory usage: {peak_memory}")
 
     
     # Plot training validation losses vs. epoches

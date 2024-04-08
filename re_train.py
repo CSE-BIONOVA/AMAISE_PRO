@@ -1,5 +1,4 @@
 from helper import *
-from helper_resnet import *
 import argparse
 import pandas as pd
 from torch.utils.data import DataLoader

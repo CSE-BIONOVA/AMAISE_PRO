@@ -7,7 +7,6 @@ from Bio.SeqIO.QualityIO import FastqGeneralIterator
 torch.backends.cudnn.enabled=False
 from constants import *
 import joblib
-from classify import *
 from pcmer import features
 
 # ensure reproducibility
