@@ -11,12 +11,12 @@ from torch.utils.data import random_split
 from sklearn.model_selection import train_test_split
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], 'm:i:l:n:o:')
+    opts, args = getopt.getopt(sys.argv[1:], "m:i:l:n:o:")
 except getopt.GetoptError:
     sys.exit(2)
-    
+
 for opt, arg in opts:
-    if opt == '-h':
+    if opt == "-h":
         sys.exit()
     elif opt in ("-m", "--model"):
         modelpath = arg
@@ -28,19 +28,20 @@ for opt, arg in opts:
         newModelPath = arg
     elif opt in ("-o", "--out"):
         result_path = arg
- 
+
 INIT_LR = 1e-3
 BATCH_SIZE = 1024
-EPOCHS = 30 
-        
+EPOCHS = 30
+
 # Load AMAISE onto GPUs
 model = TCN()
 model = nn.DataParallel(model)
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 train_df = pd.read_csv(labelset).to_numpy()
 trainData = []
+
 
 def encodeLabel(num):
     encoded_l = np.zeros(6)
@@ -48,17 +49,18 @@ def encodeLabel(num):
     # print(num, encoded_l)
     return encoded_l
 
-i=0
+
+i = 0
 X = []
 y = []
 for seq in SeqIO.parse(inputset, "fasta"):
     add_len = 9000
-    encoded = generate_long_sequences(seq+"0"*add_len)[:add_len]
+    encoded = generate_long_sequences(seq + "0" * add_len)[:add_len]
     label = encodeLabel(train_df[i][1])
     # trainData.append((encoded, label))
     X.append(encoded)
     y.append(label)
-    i+=1
+    i += 1
 
 # val_size = 10000
 # train_size = len(trainData) - val_size
@@ -87,7 +89,7 @@ model.module.fc = nn.Linear(model.module.fc.in_features, 6)
 for param in model.parameters():
     param.requires_grad = False
 for param in model.module.fc.parameters():
-    param.requires_grad = True   
+    param.requires_grad = True
 # model.module.fc.requires_grad = True
 model.to(device)
 opt = Adam(model.parameters(), lr=INIT_LR)
@@ -96,7 +98,7 @@ lossFn = nn.CrossEntropyLoss()
 print("training the network...")
 startTime = time.time()
 max_val_acc = 0
-file = open(result_path, 'a')
+file = open(result_path, "a")
 # loop over our epochs
 for e in range(0, EPOCHS):
 
@@ -108,7 +110,7 @@ for e in range(0, EPOCHS):
     correct_train_predictions = 0
 
     # loop over the training set
-    for step, (x,y) in enumerate(trainDataLoader):
+    for step, (x, y) in enumerate(trainDataLoader):
         # send the input to the device
         (x, y) = (x.clone().detach().float().to(device), y.to(device))
         # perform a forward pass and calculate the training loss
@@ -126,7 +128,7 @@ for e in range(0, EPOCHS):
         opt.zero_grad()
         loss.backward()
         opt.step()
-    
+
     model.eval()
 
     # Initialize total validation loss for each epoch
@@ -137,7 +139,7 @@ for e in range(0, EPOCHS):
     with torch.no_grad():
         for val_x, val_y in valDataLoader:
             val_x, val_y = val_x.clone().detach().float().to(device), val_y.to(device)
-            
+
             # perform a forward pass and calculate the validation loss
             val_pred = model(val_x)
             val_loss = lossFn(val_pred, val_y)
@@ -145,23 +147,35 @@ for e in range(0, EPOCHS):
 
             _, predicted_val_labels = torch.max(val_pred, 1)
             _, true_val_labels = torch.max(val_y, 1)
-            correct_val_predictions += (predicted_val_labels == true_val_labels).sum().item()
+            correct_val_predictions += (
+                (predicted_val_labels == true_val_labels).sum().item()
+            )
 
     train_accuracy = correct_train_predictions / len(trainDataLoader.dataset)
     val_accuracy = correct_val_predictions / len(valDataLoader.dataset)
     # calculate the average training and validation loss
     avgTrainLoss = total_loss / trainSteps
     avgValLoss = total_val_loss / valSteps
-    print(f'Epoch {e+1}/{EPOCHS}, Training Loss: {avgTrainLoss}, Train Accuracy: {train_accuracy}, Validation Loss: {avgValLoss}, Validation Accuracy: {val_accuracy}')
-    file.write(f'Epoch {e+1}/{EPOCHS}, Training Loss: {avgTrainLoss}, Train Accuracy: {train_accuracy}, Validation Loss: {avgValLoss}, Validation Accuracy: {val_accuracy}\n')
+    print(
+        f"Epoch {e+1}/{EPOCHS}, Training Loss: {avgTrainLoss}, Train Accuracy: {train_accuracy}, Validation Loss: {avgValLoss}, Validation Accuracy: {val_accuracy}"
+    )
+    file.write(
+        f"Epoch {e+1}/{EPOCHS}, Training Loss: {avgTrainLoss}, Train Accuracy: {train_accuracy}, Validation Loss: {avgValLoss}, Validation Accuracy: {val_accuracy}\n"
+    )
     if max_val_acc < val_accuracy:
         max_val_acc = val_accuracy
         torch.save(model.state_dict(), newModelPath)
 # finish measuring how long training took
 endTime = time.time()
-print("total time taken to train the model: {:.2f} min".format((endTime - startTime)/60))
-file.write("total time taken to train the model: {:.2f} min\n".format((endTime - startTime)/60))
+print(
+    "total time taken to train the model: {:.2f} min".format((endTime - startTime) / 60)
+)
+file.write(
+    "total time taken to train the model: {:.2f} min\n".format(
+        (endTime - startTime) / 60
+    )
+)
 file.close()
 # serialize the model to disk
-#modelP = nn.DataParallel(model)
+# modelP = nn.DataParallel(model)
 # torch.save(model.state_dict(), newModelPath)

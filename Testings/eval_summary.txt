@@ -1,3 +1,0 @@
-Accuracy: 0.7597015576
-Sensitivity: 0.7597015576
-Specificity: nan

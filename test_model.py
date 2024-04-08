@@ -5,13 +5,14 @@ from helper import *
 import torch.nn as nn
 import sys, getopt
 from sklearn.metrics import classification_report
+
 try:
-    opts, args = getopt.getopt(sys.argv[1:], 'm:i:l:o:')
+    opts, args = getopt.getopt(sys.argv[1:], "m:i:l:o:")
 except getopt.GetoptError:
     sys.exit(2)
-    
+
 for opt, arg in opts:
-    if opt == '-h':
+    if opt == "-h":
         sys.exit()
     elif opt in ("-m", "--model"):
         modelpath = arg
@@ -25,21 +26,24 @@ for opt, arg in opts:
 BATCH_SIZE = 2048
 model = TCN()
 model = nn.DataParallel(model)
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-model.load_state_dict(torch.load(modelpath,device))
+model.load_state_dict(torch.load(modelpath, device))
 model.to(device)
 model.eval()
 
 label_df = pd.read_csv(labelset)
 data_arr = pd.read_csv(inputset, header=None).to_numpy()
 
+
 def encodeLabel(num):
     encoded_l = np.zeros(6)
-    encoded_l[num-1] = 1
+    encoded_l[num - 1] = 1
     # print(num, encoded_l)
     return encoded_l
-i=0
+
+
+i = 0
 # X = []
 # y = []
 test_data = []
@@ -54,10 +58,15 @@ test_data = []
 #     i+=1
 
 for row in data_arr:
-    test_data.append((np.reshape(row.astype(np.float32), (-1, 1)), encodeLabel(label_df['y_true'][i])))
+    test_data.append(
+        (
+            np.reshape(row.astype(np.float32), (-1, 1)),
+            encodeLabel(label_df["y_true"][i]),
+        )
+    )
     i = i + 1
 
-file = open(result_path, 'a')
+file = open(result_path, "a")
 testDataLoader = DataLoader(test_data, shuffle=False, batch_size=BATCH_SIZE)
 correct_test_predictions = 0
 predicted = []
@@ -78,6 +87,18 @@ test_accuracy = correct_test_predictions / len(testDataLoader.dataset)
 print("Accuracy: ", test_accuracy)
 file.write("Accuracy: {:.2f}\n".format(test_accuracy))
 
-print(classification_report(true, predicted, target_names = ['Host','Bacteria','Virus','Fungi','Archaea','Protozoa']))
-file.write(classification_report(true, predicted, target_names = ['Host','Bacteria','Virus','Fungi','Archaea','Protozoa']))
+print(
+    classification_report(
+        true,
+        predicted,
+        target_names=["Host", "Bacteria", "Virus", "Fungi", "Archaea", "Protozoa"],
+    )
+)
+file.write(
+    classification_report(
+        true,
+        predicted,
+        target_names=["Host", "Bacteria", "Virus", "Fungi", "Archaea", "Protozoa"],
+    )
+)
 file.close()
