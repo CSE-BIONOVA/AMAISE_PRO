@@ -1,5 +1,4 @@
 from helper import *
-import argparse
 import pandas as pd
 from torch.utils.data import DataLoader
 from torch.optim import Adam
@@ -8,7 +7,6 @@ import logging
 import click
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from collections import Counter
 import numpy as np
 import psutil
 
@@ -29,7 +27,14 @@ import psutil
     required=True,
 )
 @click.option("--model", "-m", help="path to save model", type=str, required=True)
-@click.option("--pre_model", "-p", help="path to the existing model", type=str, required=True)
+@click.option(
+    "--pre_model",
+    "-p",
+    help="path to the existing model",
+    type=str,
+    required=False,
+    default="models/AMAISE_PRO",
+)
 @click.option("--output", "-o", help="path to save output", type=str, required=True)
 @click.option(
     "--batch_size",

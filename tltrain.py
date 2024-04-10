@@ -7,7 +7,6 @@ import pandas as pd
 from torch.optim import Adam
 import time
 from Bio import SeqIO
-from torch.utils.data import random_split
 from sklearn.model_selection import train_test_split
 
 try:
@@ -168,7 +167,9 @@ for e in range(0, EPOCHS):
 # finish measuring how long training took
 endTime = time.time()
 print(
-    "total time taken to re-train the model: {:.2f} min".format((endTime - startTime) / 60)
+    "total time taken to re-train the model: {:.2f} min".format(
+        (endTime - startTime) / 60
+    )
 )
 file.write(
     "total time taken to re-train the model: {:.2f} min\n".format(
