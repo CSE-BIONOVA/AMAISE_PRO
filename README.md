@@ -24,7 +24,7 @@ pip install -r requirements.txt
 ____________________________________________________________________________________________
 ## Usage Notes for AMAISE_Pro
 
-### for classifying sequences using AMAISE_Pro
+### For classifying sequences using AMAISE_Pro
 
 python3 mclass_classification.py -i **pathToInputFile** -t **typeOfInputFile** -k **pathToEncodedInputFile** -m **pathToUsedModel(optional)** -o **pathToOutputFolder**
 
@@ -51,7 +51,7 @@ ex:
 ```sh
 python3 mclass_classification.py -i example/test.fasta -t fasta -k example/test_3mers.csv -o example/results
 ```
-### for evaluating results
+### For evaluating results
 
 python3 evaluation.py -p **pathToPredFile** -t **pathToTrueFile**
 
@@ -72,7 +72,7 @@ ex:
 python3 evaluation.py -p example/results/predictions.csv -t example/test_labels.csv
 ```
 
-### for retraining with a different host
+### For retraining with a different host
 
 python3 re_train.py -i **pathToTrainData(k-mers)** -l **pathToTrainDataLabels** -m **pathToSaveModel** -p **pathToExistingModel** -o **pathToSaveLogFile** -b **batchSize** -e **#epoches**  -lr **learningRate**
 
