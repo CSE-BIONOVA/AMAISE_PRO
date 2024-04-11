@@ -15,7 +15,7 @@ import psutil
 @click.option(
     "--input",
     "-i",
-    help="path to training data",
+    help="path to training data (generated k-mers)",
     type=click.Path(exists=True),
     required=True,
 )

@@ -33,7 +33,7 @@ from sklearn.metrics import classification_report
     type=click.Path(exists=True),
     required=True,
 )
-@click.option("--model", "-m", help="path to the model", type=str, required=True)
+@click.option("--model", "-m", help="path to the model", type=click.Path(exists=True), default="models/AMAISE_PRO", required=False)
 @click.option(
     "--output",
     "-o",
@@ -44,10 +44,8 @@ from sklearn.metrics import classification_report
 @click.help_option("--help", "-h", help="Show this message and exit")
 def main(inputset, type, k_mers, modelPath, resultPath):
 
-    # modelPath = model
-    # inputset = input
-    # k_mers = k_mers
-    # resultPath = output
+    if resultPath[-1]!='/':
+        resultPath = resultPath+'/'
 
     logger = logging.getLogger(f"amaisepro")
     logger.setLevel(logging.DEBUG)
@@ -58,7 +56,7 @@ def main(inputset, type, k_mers, modelPath, resultPath):
     consoleHeader.setLevel(logging.INFO)
     logger.addHandler(consoleHeader)
 
-    fileHandler = logging.FileHandler(f"{resultPath}/info.log")
+    fileHandler = logging.FileHandler(f"{resultPath}info.log")
     fileHandler.setLevel(logging.DEBUG)
     fileHandler.setFormatter(formatter)
     logger.addHandler(fileHandler)
@@ -72,7 +70,6 @@ def main(inputset, type, k_mers, modelPath, resultPath):
 
     logger.info(f"Device: {device}")
 
-    test_df = pd.read_csv(inputset)
     k_mer_arr = pd.read_csv(k_mers, header=None).to_numpy()
 
     input_data = []
@@ -113,8 +110,17 @@ def main(inputset, type, k_mers, modelPath, resultPath):
     pred_df = pd.DataFrame(
         {"id": accession_numbers, "pred_label": predicted_labels.cpu()}
     )
+    pred_df.to_csv(f"{resultPath}predictions.csv", index=False)
 
-    pred_df.to_csv(f"{resultPath}/predictions.csv", index=False)
+    id_label_dict = dict(zip(pred_df['id'], pred_df['pred_label']))
+    class_seqs = [[],[],[],[],[],[]]
+    for seq in SeqIO.parse(inputset, type):
+        class_seqs[id_label_dict[seq.id]].append(seq)
+
+    class_names = ['host','bacteria,''virus','fungi','archaea','protozoa']
+    for i in range(1, 6):
+        with open(f"{resultPath}{class_names[i]}.{type}", "w") as file:
+            SeqIO.write(class_seqs[i], file, type)
 
     endTime = time.time()
     memory = psutil.Process().memory_info()
