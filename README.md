@@ -59,10 +59,8 @@ python3 evaluation.py -p **pathToPredFile** -t **pathToTrueFile**
 
 - **p : pathToPredFile** = path to generated file of predicted labels (.csv)
 - **t : pathToTrueFile** = path to file of true labels (csv file with two columns: accesion codes and corresponding true labels)
-
-*0 for host, 1 for bacteria, 2 for virus, 3 for fungi, 4 for archaea, and 5 for protozoa*
-
-*ex: example/test_labels.csv*
+    - *0 for host, 1 for bacteria, 2 for virus, 3 for fungi, 4 for archaea, and 5 for protozoa*
+    - *ex: example/test_labels.csv*
 
 2) Outputs - classification report as a terminal output
 
@@ -80,8 +78,7 @@ python3 re_train.py -i **pathToTrainData(k-mers)** -l **pathToTrainDataLabels** 
 
 - **i : pathToTrainData(k-mers)** = path to train set that is seq2vec-enocoded (.csv)
 - **l : pathToTrainDataLabels** = path to labels file of train set (csv file with two columns: accesion codes and corresponding true labels)
-
-*ex: example/retrain_labels.csv*
+    - *ex: example/retrain_labels.csv*
 
 
 - **m : pathToSaveModel** = path (with model name) to save new model
