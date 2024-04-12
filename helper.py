@@ -110,7 +110,7 @@ def pc_mer_encoding(sequence):
 
 def encodeLabel(num):
     encoded_l = [0] * 6
-    encoded_l[num - 1] = 1
+    encoded_l[num] = 1
     return torch.FloatTensor(encoded_l)
 
 

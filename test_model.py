@@ -38,7 +38,7 @@ data_arr = pd.read_csv(inputset, header=None).to_numpy()
 
 def encodeLabel(num):
     encoded_l = np.zeros(6)
-    encoded_l[num - 1] = 1
+    encoded_l[num] = 1
     # print(num, encoded_l)
     return encoded_l
 
