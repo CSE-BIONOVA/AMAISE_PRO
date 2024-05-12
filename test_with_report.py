@@ -103,7 +103,7 @@ def main(input, labels, model, output):
     with torch.no_grad():
         for step, (test_x, test_y) in enumerate(testDataLoader):
             test_x, test_y = test_x.to(device), test_y.to(device)
-            pred = model(test_x)
+            pred = torch.nn.functional.softmax(model(test_x), dim=1)
             _, predicted_labels = torch.max(pred, 1)
             _, true_labels = torch.max(test_y, 1)
             predicted.extend(predicted_labels.cpu())
