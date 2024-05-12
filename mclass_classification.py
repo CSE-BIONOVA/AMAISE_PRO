@@ -34,7 +34,14 @@ from sklearn.metrics import classification_report
     type=click.Path(exists=True),
     required=True,
 )
-@click.option("--model", "-m", help="path to the model", type=click.Path(exists=True), default="models/AMAISE_PRO", required=False)
+@click.option(
+    "--model",
+    "-m",
+    help="path to the model",
+    type=click.Path(exists=True),
+    default="models/AMAISE_PRO",
+    required=False,
+)
 @click.option(
     "--output",
     "-o",
@@ -50,8 +57,8 @@ def main(input_fasta_fastq, type_, input_kmers, model, output):
     k_mers = input_kmers
     modelPath = model
     resultPath = output
-    if resultPath[-1]!='/':
-        resultPath = resultPath+'/'
+    if resultPath[-1] != "/":
+        resultPath = resultPath + "/"
 
     logger = logging.getLogger(f"amaisepro")
     logger.setLevel(logging.DEBUG)
@@ -116,22 +123,19 @@ def main(input_fasta_fastq, type_, input_kmers, model, output):
             _, predicted_labels = torch.max(pred, 1)
             predicted.extend(predicted_labels.cpu().numpy())
 
-
     endTime = time.time()
     predicting_time_diff = (endTime - startTime_) / 60
     logger.info(f"Time taken to predict the results: {predicting_time_diff} min")
 
-    pred_df = pd.DataFrame(
-        {"id": accession_numbers, "pred_label": predicted}
-    )
+    pred_df = pd.DataFrame({"id": accession_numbers, "pred_label": predicted})
     pred_df.to_csv(f"{resultPath}predictions.csv", index=False)
 
-    id_label_dict = dict(zip(pred_df['id'], pred_df['pred_label']))
-    class_seqs = [[],[],[],[],[],[]]
+    id_label_dict = dict(zip(pred_df["id"], pred_df["pred_label"]))
+    class_seqs = [[], [], [], [], [], []]
     for seq in SeqIO.parse(inputset, type_):
         class_seqs[id_label_dict[seq.id]].append(seq)
 
-    class_names = ['host','bacteria','virus','fungi','archaea','protozoa']
+    class_names = ["host", "bacteria", "virus", "fungi", "archaea", "protozoa"]
     for i in range(1, 6):
         with open(f"{resultPath}{class_names[i]}.{type_}", "w") as file:
             SeqIO.write(class_seqs[i], file, type_)
@@ -139,11 +143,7 @@ def main(input_fasta_fastq, type_, input_kmers, model, output):
     endTime = time.time()
     memory = psutil.Process().memory_info()
 
-    logger.info(
-        "Total time: {:.2f} min".format(
-            (endTime - startTime) / 60
-        )
-    )
+    logger.info("Total time: {:.2f} min".format((endTime - startTime) / 60))
     logger.info(f"Memory usage: {memory}")
 
 
