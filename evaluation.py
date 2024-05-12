@@ -1,65 +1,62 @@
-from sklearn.metrics import accuracy_score, confusion_matrix
-import sys, getopt
+from helper import *
 import pandas as pd
+import logging
+import click
+import numpy as np
+from sklearn.metrics import classification_report
 
-try:
-    opts, args = getopt.getopt(sys.argv[1:], 'o:t:p:')
-except getopt.GetoptError:
-    sys.exit(2)
-    
-for opt, arg in opts:
-    if opt == '-h':
-        sys.exit()
-    elif opt in ("-o", "--outfile"):
-        fileToWrite = arg
-    elif opt in ("-t", "--truefile"):
-        truefile = arg
-    elif opt in ("-p", "--predfile"):
-        predfile = arg
 
-preds = {}
+@click.command()
+@click.option(
+    "--pred",
+    "-p",
+    help="path to predicted labels file",
+    type=click.Path(exists=True),
+    required=True,
+)
+@click.option(
+    "--true",
+    "-t",
+    help="path to true labels file",
+    type=click.Path(exists=True),
+    required=True,
+)
+@click.help_option("--help", "-h", help="Show this message and exit")
+def main(predfile, truefile):
 
-with open(predfile, 'r') as f:
-      for line in f:
-        line_list = line.split(', ')
-        preds[line_list[0]] = line_list[1]
+    logger = logging.getLogger(f"amaisepro")
+    logger.setLevel(logging.DEBUG)
+    logging.captureWarnings(True)
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    consoleHeader = logging.StreamHandler()
+    consoleHeader.setFormatter(formatter)
+    consoleHeader.setLevel(logging.INFO)
+    logger.addHandler(consoleHeader)
 
-del preds["id"]
+    pred_df = pd.read_csv(predfile)
+    true_df = pd.read_csv(truefile, usecols=[0, 1], names=["id", "label"], header=None)
 
-true = []
-pred = []
-true_df = pd.read_csv(truefile).to_numpy()
-arr = []
-for line in true_df:
-    # if int(preds[line[0]]) == 4:
-    #     pred.append(1)
-    # elif int(preds[line[0]]) == 2:
-    #     pred.append(2)
-    # elif int(preds[line[0]]) == 6:
-    #     pred.append(3)
-    # elif int(preds[line[0]]) == 3:
-    #     pred.append(4)
-    # elif int(preds[line[0]]) == 1:
-    #     pred.append(5)
-    # elif int(preds[line[0]]) == 5:
-    #     pred.append(6)
-    pred.append(int(preds[line[0]]))
-    true.append(line[1])
-    arr.append(str(int(preds[line[0]]))+":"+str(line[1]))
-    # print(str(int(preds[line[0]]))+":"+str(line[1]))
-    # if int(line[1])!=1:
-    #    true.append(0)
-    # else:
-    #    true.append(1)
-   
-accuracy = accuracy_score(true, pred)
-# tn, fp, fn, tp = confusion_matrix(true, pred).ravel()
-# sens =  tp/(tp + fn)
-# spec = tn/(tn + fp)
-print(accuracy)
-# print(accuracy, sens, spec)
-with open(fileToWrite, 'w') as f:
-    f.write('Accuracy: %0.10f\n'%accuracy)
-    f.write(str(arr))
-    # f.write('Sensitivity: %0.10f\n'%sens)
-    # f.write('Specificity: %0.10f\n'%spec)
+    pred_dict = {}
+    for row in pred_df:
+        pred_dict[row["id"]] = row["pred_label"]
+
+    true_list = [[], [], [], [], [], []]
+
+    for row in true_df:
+        true_list[row["label"]].append(row["id"])
+
+    pred = []
+    true = []
+
+    for clz in range(6):
+        for ele in true_list[clz]:
+            pred.append(pred_dict[ele])
+        true.extend(np.full(len(true_list[clz]), clz))
+
+    logger.info(
+        f'\n {classification_report(true,pred,target_names=["Host", "Bacteria", "Virus", "Fungi", "Archaea", "Protozoa"],)}'
+    )
+
+
+if __name__ == "__main__":
+    main()

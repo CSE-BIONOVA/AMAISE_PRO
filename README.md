@@ -1,70 +1,107 @@
-# AMAISE_PRO
+# AMAISE_Pro
 
-When using the server, 
-```sh
-cd Documents/codes/AMAISE_PRO
-```
-## Requirements
+AMAISE_Pro is a novel, multi-class classification tool with the host depletion. Given a set of reads, for each sequence, AMAISE outputs a classification label determining what is the superkingdom it belongs to or does it belongs to host (0 for host, 1 for bacteria, 2 for virus, 3 for fungi, 4 for archaea, and 5 for protozoa). AMAISE then stores the sequences of each type in 6 files for downstream analysis.
 
-To install required libraries and packages,
+____________________________________________________________________________________________
+## System Requirements
 
-```sh
-pip install requirements.txt
-```
-go to MultiClzImpl branch
-
-## for original training
-
-python3 train.py -m **modelNameWithPath** -i **trainsetWithPath** -l **labelsetWithPath** -o **filenameWithPath**
-
-- **modelNameWithPath** = model name with path to save the model
-
-- **trainsetWithPath** = .fasta file (train set)
-
-- **labelsetWithPath** = .csv file (train set)
-
-- **filenameWithPath** = file name with path to save the results
-
-ex: 
+First, download this Github Repository,
 
 ```sh
-python3 train.py -m ../Models/human_model -i ../Final_dataset/human_train/human_train.fasta -l ../Final_dataset/human_train/human_train_labels.csv -o ../TestResults/result.txt
+git clone https://github.com/CSE-BIONOVA/AMAISE_PRO.git
 ```
 
-## Transfer Learning
+AMAISE requires a computational environment with a Linux-based machine/Ubuntu.
 
-python3 tltrain.py -m **existingModelNameWithPath** -i **trainsetWithPath** -l **labelsetWithPath** -n **newModelNameWithPath** -o **filenameWithPath**
+Required packages and versions are listed in "requirements.txt". You can install the packages in requirements.txt using:
 
-- **existingModelNameWithPath** = existing model name with path
+```sh
+pip install -r requirements.txt
+```
+____________________________________________________________________________________________
+## Usage Notes for AMAISE_Pro
 
-- **trainsetWithPath** = .fasta file (train set)
+### For classifying sequences using AMAISE_Pro
 
-- **labelsetWithPath** = .csv file (train set)
+python3 mclass_classification.py -i **pathToInputFile** -t **typeOfInputFile** -k **pathToEncodedInputFile** -m **pathToUsedModel(optional)** -o **pathToOutputFolder**
 
-- **newModelNameWithPath** = model name with path to save the new model
+#### Arguments
 
-- **filenameWithPath** = file name with path to save the results
+\#  |   arg  | info
+------------- | ------------- | -------------
+`i` | pathToInputFile  | path to input data (reads in a fasta or fastq file)
+`t` | typeOfInputFile  | type of the input data file (fasta or fastq)
+`i` | pathToInputFile   |   path to input data (reads in a fasta or fastq file)
+`t` | typeOfInputFile   |   type of the input data file (fasta or fastq)
+`k` | pathToEncodedInputFile    |   path to seq2vec-enocoded input data (.csv)
+`m` | pathToUsedModel   |   optional (if you want to use other model instead of original AMAISE_Pro, path to the model which is going to be used should be provided here)
+`o` | pathToOutputFolder    |   path to the folder that you want to put the final results and predictions
+
+#### Outputs (saved into output folder)
+
+file  | info
+------------- | -------------
+predictions.csv |   csv file of accession codes and corresponiding predicted labels
+host.fastq(.fasta)  |   fastq or fasta file of classified host sequences
+bacteria.fastq(.fasta)  |   fastq or fasta file of classified bacteria sequences
+virus.fastq(.fasta) |   fastq or fasta file of classified virus sequences
+fungi.fastq(.fasta) |   fastq or fasta file of classified fungi sequences
+archaea.fastq(.fasta)   |   fastq or fasta file of classified archaea sequences
+protozoa.fastq(.fasta)  |   fastq or fasta file of classified protozoa sequences
 
 ex:
 
 ```sh
-python3 tltrain.py -m ../Models/human_model -i .Final_dataset/shark_train/shark_train.fasta -l ../Final_dataset/shark_train/shark_train_labels.csv -n ../Models/shark_model -o ../TestResults/result_tl.txt
+python3 mclass_classification.py -i example/test.fasta -t fasta -k example/test_3mers.csv -o example/results
 ```
-## for testing
 
-python3 test_model.py -m **existingModelNameWithPath** -i **testsetWithPath** -l **labelsetWithPath** -o **filenameWithPath**
+### For evaluating results
 
-- **modelNameWithPath** = existing model name with path
+python3 evaluation.py -p **pathToPredFile** -t **pathToTrueFile**
 
-- **testsetWithPath** = .fasta file (test set)
+#### Arguments
 
-- **labelsetWithPath** = .csv file (test set)
 
-- **filenameWithPath** = file name with path to save the results
+\#  |   arg  | info
+------------- | ------------- | -------------
+`p` | pathToPredFile    |   path to generated file of predicted labels (.csv)
+`t` | pathToTrueFile    |   path to file of true labels (csv file with two columns: accesion codes and corresponding true labels)<br><br>   *0 for host, 1 for bacteria, 2 for virus, 3 for fungi, 4 for archaea, and 5 for protozoa*<br> *ex: example/test_labels.csv*
 
-ex: 
+#### Outputs
+
+- classification report as a terminal output
+
+ex:
 
 ```sh
-python3 test_model.py -m ../Models/human_model -i ../Final_dataset/human_test/human_test.fasta -l ../Final_dataset/human_test/human_test_labels.csv -o ../TestResults/result_test.txt
+python3 evaluation.py -p example/results/predictions.csv -t example/test_labels.csv
 ```
+
+### For retraining with a different host
+
+python3 re_train.py -i **pathToTrainData(k-mers)** -l **pathToTrainDataLabels** -m **pathToSaveModel** -p **pathToExistingModel** -o **pathToSaveLogFile** -b **batchSize** -e **#epoches**  -lr **learningRate**
+
+#### Arguments
+
+\#  |   arg  | info
+------------- | ------------- | -------------
+`i` | pathToTrainData(k-mers)   |   path to train set that is seq2vec-enocoded (.csv)
+`l` | pathToTrainDataLabels |   path to labels file of train set (csv file with two columns: accesion codes and corresponding true labels)<br>*ex: example/retrain_labels.csv*
+`m` | pathToSaveModel   |   path (with model name) to save new model
+`p` | pathToExistingModel   |   optional (if you want to use other model instead of original AMAISE_Pro as existing model, path to that model should be provided here)
+`o` | pathToSaveLogFile |   path (with name for log file) to save log file
+`b` | batchSize |   batch size
+`e` | #epoches  |   number of epoches
+`lr` | learningRate |   initial learning rate
+
+#### Outputs
+
+- re-trained model in the provided path
+- log file in the provided path
+
+ex:
+
+```sh
+python3 re_train.py -i example/retrain_3mers.csv -l example/retrain_labels.csv -m example/retrained_model -o example/retrain_info -b 256 -e 30 -lr 0.001
+ ```   
 
