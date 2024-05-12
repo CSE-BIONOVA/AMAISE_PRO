@@ -31,13 +31,13 @@ torch.backends.cudnn.benchmark = False
 
 # Outputs to help user use AMAISE
 try:
-    opts, args = getopt.getopt(sys.argv[1:], 'i:t:o:')
+    opts, args = getopt.getopt(sys.argv[1:], 'i:t:o:m:')
 except getopt.GetoptError:
-    print('host_depletion.py -i <inputfile> -t <typefile> -o <outfolder>')
+    print('host_depletion.py -i <inputfile> -t <typefile> -o <outfolder> -m <model>')
     sys.exit(2)
 
-if len(opts) != 3:
-    print('host_depletion.py -i <inputfile> -t <typefile> -o <outfolder>')
+if len(opts) != 4:
+    print('host_depletion.py -i <inputfile> -t <typefile> -o <outfolder> -m <model>')
     sys.exit()
 
 '''
@@ -48,7 +48,7 @@ outfolder: folder to write output files to
 '''
 for opt, arg in opts:
     if opt == '-h':
-        print('host_depletion.py -i <inputfile> -t <typefile> -o <outfolder>')
+        print('host_depletion.py -i <inputfile> -t <typefile> -o <outfolder> -m <model>')
         sys.exit()
     elif opt in ("-i", "--inputfile"):
         testfile = arg
@@ -58,6 +58,8 @@ for opt, arg in opts:
             print('-t argument: fastq, fasta')
     elif opt in ("-o", "--outfolder"):
         outfolder = arg
+    elif opt in ("-m", "--model"):
+        modelpath = arg
             
 # Create temp_lenfiles folder
 if not os.path.exists('temp_lenfiles'):
@@ -90,7 +92,8 @@ model = nn.DataParallel(model)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model.to(device)
-model.load_state_dict(torch.load(modelpath))
+# print(torch.load(modelpath,device))
+model.load_state_dict(torch.load(modelpath,device))
 model.eval()
 
 # Get length information to bin input sequences by length
@@ -132,7 +135,13 @@ for filelens in all_filelens:
                         if j == temp_batch_size:
                             X = torch.tensor(X).float().to(device)
                             with torch.cuda.amp.autocast():
-                                y_pred_oh = torch.sigmoid(model(X)).detach().cpu().numpy()[:, 1]
+                                y__=torch.softmax(model(X),dim=1).detach().cpu().numpy()
+                                # print("y_pred_oh",y__)
+                                # y_pred_oh = y__[:, 1]
+                                # print([np.where(l==np.max(l))[0][0] for l in y__])
+                                y_pred_oh = [np.where(l==np.max(l))[0][0] for l in y__]
+                                # print("y_pred_oh_after",y__[:,1])
+                                # print("y_pred_oh",y_pred_oh)
                             if track_gpu == True:
                                 gpu_usage(gpufile)
                             del X
@@ -169,7 +178,9 @@ for filelens in all_filelens:
                 if i > 0 or j > 0:
                     X = torch.tensor(X).float().to(device)
                     with torch.cuda.amp.autocast():
-                        y_pred_oh = torch.sigmoid(model(X)).detach().cpu().numpy()[:, 1]
+                        # y_pred_oh = torch.sigmoid(model(X)).detach().cpu().numpy()[:, 1]
+                        y__=torch.softmax(model(X),dim=1).detach().cpu().numpy()
+                        y_pred_oh = [np.where(l==np.max(l))[0][0] for l in y__]
                     if track_gpu == True:
                         gpu_usage(gpufile)
                     del X
