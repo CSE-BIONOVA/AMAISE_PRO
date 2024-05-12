@@ -2,6 +2,7 @@ from helper import *
 import torch
 import pandas as pd
 from Bio import SeqIO
+from torch.utils.data import DataLoader
 import torch.nn as nn
 import time
 import logging
@@ -20,7 +21,7 @@ from sklearn.metrics import classification_report
     required=True,
 )
 @click.option(
-    "type",
+    "type_",
     "-t",
     help="type of the input file (fasta or fastq)",
     type=click.Choice(["fasta", "fastq"]),
@@ -42,8 +43,13 @@ from sklearn.metrics import classification_report
     required=True,
 )
 @click.help_option("--help", "-h", help="Show this message and exit")
-def main(inputset, type, k_mers, modelPath, resultPath):
+def main(input_fasta_fastq, type_, input_kmers, model, output):
 
+    inputset = input_fasta_fastq
+    type_ = type_
+    k_mers = input_kmers
+    modelPath = model
+    resultPath = output
     if resultPath[-1]!='/':
         resultPath = resultPath+'/'
 
@@ -84,7 +90,7 @@ def main(inputset, type, k_mers, modelPath, resultPath):
         i = i + 1
 
     accession_numbers = []
-    for seq in SeqIO.parse(inputset, type):
+    for seq in SeqIO.parse(inputset, type_):
         accession_numbers.append(seq.id)
 
     endTime = time.time()
@@ -99,34 +105,42 @@ def main(inputset, type, k_mers, modelPath, resultPath):
 
     logger.info("predicting the classes...")
 
-    startTime = time.time()
-
-    input_data = input_data.to(device)
-
+    startTime_ = time.time()
+    dataLoader = DataLoader(input_data, shuffle=False, batch_size=2048)
+    # input_data = input_data.to(device)
+    predicted = []
     with torch.no_grad():
-        pred = model(input_data)
-        _, predicted_labels = torch.max(pred, 1)
+        for step, test_x in enumerate(dataLoader):
+            test_x = test_x.to(device)
+            pred = torch.nn.functional.softmax(model(test_x), dim=1)
+            _, predicted_labels = torch.max(pred, 1)
+            predicted.extend(predicted_labels.cpu().numpy())
+
+
+    endTime = time.time()
+    predicting_time_diff = (endTime - startTime_) / 60
+    logger.info(f"Time taken to predict the results: {predicting_time_diff} min")
 
     pred_df = pd.DataFrame(
-        {"id": accession_numbers, "pred_label": predicted_labels.cpu()}
+        {"id": accession_numbers, "pred_label": predicted}
     )
     pred_df.to_csv(f"{resultPath}predictions.csv", index=False)
 
     id_label_dict = dict(zip(pred_df['id'], pred_df['pred_label']))
     class_seqs = [[],[],[],[],[],[]]
-    for seq in SeqIO.parse(inputset, type):
+    for seq in SeqIO.parse(inputset, type_):
         class_seqs[id_label_dict[seq.id]].append(seq)
 
-    class_names = ['host','bacteria,''virus','fungi','archaea','protozoa']
+    class_names = ['host','bacteria','virus','fungi','archaea','protozoa']
     for i in range(1, 6):
-        with open(f"{resultPath}{class_names[i]}.{type}", "w") as file:
-            SeqIO.write(class_seqs[i], file, type)
+        with open(f"{resultPath}{class_names[i]}.{type_}", "w") as file:
+            SeqIO.write(class_seqs[i], file, type_)
 
     endTime = time.time()
     memory = psutil.Process().memory_info()
 
     logger.info(
-        "total time taken to predict results: {:.2f} min".format(
+        "Total time: {:.2f} min".format(
             (endTime - startTime) / 60
         )
     )
