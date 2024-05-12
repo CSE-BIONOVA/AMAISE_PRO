@@ -27,15 +27,15 @@ python3 mclass_classification.py -i **pathToInputFile** -t **typeOfInputFile** -
 
 #### Arguments
 
-arg  | info
-------------- | -------------
-`i` : pathToInputFile  | path to input data (reads in a fasta or fastq file)
-`t` : typeOfInputFile  | type of the input data file (fasta or fastq)
-`i` : pathToInputFile   |   path to input data (reads in a fasta or fastq file)
-`t` : typeOfInputFile   |   type of the input data file (fasta or fastq)
-`k` : pathToEncodedInputFile    |   path to seq2vec-enocoded input data (.csv)
-`m` : pathToUsedModel   |   optional (if you want to use other model instead of original AMAISE_Pro, path to the model which is going to be used should be provided here)
-`o` : pathToOutputFolder    |   path to the folder that you want to put the final results and predictions
+\#  |   arg  | info
+------------- | ------------- | -------------
+`i` | pathToInputFile  | path to input data (reads in a fasta or fastq file)
+`t` | typeOfInputFile  | type of the input data file (fasta or fastq)
+`i` | pathToInputFile   |   path to input data (reads in a fasta or fastq file)
+`t` | typeOfInputFile   |   type of the input data file (fasta or fastq)
+`k` | pathToEncodedInputFile    |   path to seq2vec-enocoded input data (.csv)
+`m` | pathToUsedModel   |   optional (if you want to use other model instead of original AMAISE_Pro, path to the model which is going to be used should be provided here)
+`o` | pathToOutputFolder    |   path to the folder that you want to put the final results and predictions
 
 #### Outputs (saved into output folder)
 
@@ -62,10 +62,10 @@ python3 evaluation.py -p **pathToPredFile** -t **pathToTrueFile**
 #### Arguments
 
 
-arg  | info
-------------- | -------------
-`p` : pathToPredFile    |   path to generated file of predicted labels (.csv)
-`t` : pathToTrueFile    |   path to file of true labels (csv file with two columns: accesion codes and corresponding true labels)<br><br>   *0 for host, 1 for bacteria, 2 for virus, 3 for fungi, 4 for archaea, and 5 for protozoa*<br> *ex: example/test_labels.csv*
+\#  |   arg  | info
+------------- | ------------- | -------------
+`p` | pathToPredFile    |   path to generated file of predicted labels (.csv)
+`t` | pathToTrueFile    |   path to file of true labels (csv file with two columns: accesion codes and corresponding true labels)<br><br>   *0 for host, 1 for bacteria, 2 for virus, 3 for fungi, 4 for archaea, and 5 for protozoa*<br> *ex: example/test_labels.csv*
 
 #### Outputs
 
@@ -83,16 +83,16 @@ python3 re_train.py -i **pathToTrainData(k-mers)** -l **pathToTrainDataLabels** 
 
 #### Arguments
 
-arg  | info
-------------- | -------------
-`i` : pathToTrainData(k-mers)   |   path to train set that is seq2vec-enocoded (.csv)
-`l` : pathToTrainDataLabels |   path to labels file of train set (csv file with two columns: accesion codes and corresponding true labels)<br>*ex: example/retrain_labels.csv*
-`m` : pathToSaveModel   |   path (with model name) to save new model
-`p` : pathToExistingModel   |   optional (if you want to use other model instead of original AMAISE_Pro as existing model, path to that model should be provided here)
-`o` : pathToSaveLogFile |   path (with name for log file) to save log file
-`b` : batchSize |   batch size
-`e` : #epoches  |   number of epoches
-`lr` : learningRate |   initial learning rate
+\#  |   arg  | info
+------------- | ------------- | -------------
+`i` | pathToTrainData(k-mers)   |   path to train set that is seq2vec-enocoded (.csv)
+`l` | pathToTrainDataLabels |   path to labels file of train set (csv file with two columns: accesion codes and corresponding true labels)<br>*ex: example/retrain_labels.csv*
+`m` | pathToSaveModel   |   path (with model name) to save new model
+`p` | pathToExistingModel   |   optional (if you want to use other model instead of original AMAISE_Pro as existing model, path to that model should be provided here)
+`o` | pathToSaveLogFile |   path (with name for log file) to save log file
+`b` | batchSize |   batch size
+`e` | #epoches  |   number of epoches
+`lr` | learningRate |   initial learning rate
 
 #### Outputs
 
