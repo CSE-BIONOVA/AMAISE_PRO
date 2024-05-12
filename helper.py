@@ -131,7 +131,7 @@ class TCN(nn.Module):
         num_output_channels = 128
         filter_size = 15
         num_classes = 6
-        pool_amt = 5
+        pool_amt = 4
 
         super().__init__()
         self.c_in1 = nn.Conv1d(
@@ -201,12 +201,14 @@ class TCN(nn.Module):
         output = self.c_in3(output)
         output = torch.relu(output)
         # output = output + x2
-        output = self.pool(output) * (new_shape / old_shape)
+        # ************
+        # output = self.pool(output) * (new_shape / old_shape)
 
-        old_shape = output.shape[2]
-        if output.shape[2] < self.pool_amt:
-            output = self.pad(output)
-        new_shape = output.shape[2]
+        # old_shape = output.shape[2]
+        # if output.shape[2] < self.pool_amt:
+        #     output = self.pad(output)
+        # new_shape = output.shape[2]
+        # **********
         # x4 = output
         output = self.c_in4(output)
         output = torch.relu(output)
